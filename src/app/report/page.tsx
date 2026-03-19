@@ -1,6 +1,7 @@
 // src/app/report/page.tsx
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useData } from "@/contexts/data-context";
 import { CATEGORIES } from "@/lib/data/sections";
@@ -8,6 +9,7 @@ import { SECTION_IMAGES } from "@/lib/data/section-images";
 
 export default function ReportPage() {
   const { sections } = useData();
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
   const approvedSections = sections.filter((s) => s.status === "approved");
   const totalSections = sections.length;
@@ -16,6 +18,13 @@ export default function ReportPage() {
     category,
     sections: approvedSections.filter((s) => s.category === category),
   })).filter((group) => group.sections.length > 0);
+
+  const visibleCategories = activeCategory
+    ? approvedByCategory.filter((g) => g.category === activeCategory)
+    : approvedByCategory;
+
+  const toggleCategory = (cat: string) =>
+    setActiveCategory((prev) => (prev === cat ? null : cat));
 
   return (
     <div className="max-w-3xl">
@@ -39,6 +48,34 @@ export default function ReportPage() {
         )}
       </div>
 
+      {approvedByCategory.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-8">
+          <button
+            onClick={() => setActiveCategory(null)}
+            className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+              activeCategory === null
+                ? "bg-zinc-700 text-zinc-100 border-zinc-700"
+                : "text-zinc-500 border-zinc-800 hover:text-zinc-300 hover:border-zinc-700"
+            }`}
+          >
+            All sections
+          </button>
+          {approvedByCategory.map(({ category }) => (
+            <button
+              key={category}
+              onClick={() => toggleCategory(category)}
+              className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                activeCategory === category
+                  ? "bg-zinc-700 text-zinc-100 border-zinc-700"
+                  : "text-zinc-500 border-zinc-800 hover:text-zinc-300 hover:border-zinc-700"
+              }`}
+            >
+              {category}
+            </button>
+          ))}
+        </div>
+      )}
+
       {approvedByCategory.length === 0 ? (
         <div className="text-center py-24 border border-dashed border-zinc-800 rounded-lg">
           <p className="text-zinc-500">No approved sections yet</p>
@@ -46,7 +83,7 @@ export default function ReportPage() {
         </div>
       ) : (
         <div className="space-y-10">
-          {approvedByCategory.map(({ category, sections: catSections }) => (
+          {visibleCategories.map(({ category, sections: catSections }) => (
             <div key={category}>
               <h2 className="text-base font-semibold text-zinc-200 pb-2 border-b border-zinc-800 mb-5">
                 {category}
