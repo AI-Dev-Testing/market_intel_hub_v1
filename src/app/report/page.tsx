@@ -22,7 +22,7 @@ export default function ReportPage() {
         <p className="text-sm text-zinc-400 mt-1">Q2 2026 — Internal Draft</p>
         <div className="flex items-center gap-4 mt-3 text-xs text-zinc-500">
           <span>{approvedSections.length} of {totalSections} sections approved</span>
-          <span>Generated {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</span>
+          <span suppressHydrationWarning>Generated {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</span>
         </div>
         {approvedSections.length < totalSections && (
           <div className="mt-3 text-xs text-yellow-600 bg-yellow-950/30 border border-yellow-900/50 rounded-md px-3 py-2">
