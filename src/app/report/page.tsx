@@ -1,8 +1,10 @@
 // src/app/report/page.tsx
 "use client";
 
+import Link from "next/link";
 import { useData } from "@/contexts/data-context";
 import { CATEGORIES } from "@/lib/data/sections";
+import { SECTION_IMAGES } from "@/lib/data/section-images";
 
 export default function ReportPage() {
   const { sections } = useData();
@@ -25,8 +27,14 @@ export default function ReportPage() {
           <span suppressHydrationWarning>Generated {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</span>
         </div>
         {approvedSections.length < totalSections && (
-          <div className="mt-3 text-xs text-yellow-600 bg-yellow-950/30 border border-yellow-900/50 rounded-md px-3 py-2">
-            {totalSections - approvedSections.length} section(s) not yet approved — showing approved content only
+          <div className="mt-3 text-xs text-yellow-600 bg-yellow-950/30 border border-yellow-900/50 rounded-md px-3 py-2 flex items-center justify-between">
+            <span>{totalSections - approvedSections.length} section(s) not yet approved — showing approved content only</span>
+            <Link
+              href="/dashboard"
+              className="text-yellow-400 hover:text-yellow-200 underline whitespace-nowrap ml-4 transition-colors"
+            >
+              View in Dashboard →
+            </Link>
           </div>
         )}
       </div>
@@ -43,20 +51,38 @@ export default function ReportPage() {
               <h2 className="text-base font-semibold text-zinc-200 pb-2 border-b border-zinc-800 mb-5">
                 {category}
               </h2>
-              <div className="space-y-8">
-                {catSections.map((section) => (
-                  <div key={section.id}>
-                    <h3 className="text-sm font-semibold text-zinc-300 mb-3">
-                      {section.title}
-                    </h3>
-                    <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">
-                      {section.draft}
-                    </p>
-                    <p className="text-xs text-zinc-600 mt-3">
-                      — {section.assignedSme || "Unassigned"} · {section.lastUpdated}
-                    </p>
-                  </div>
-                ))}
+              <div className="space-y-6">
+                {catSections.map((section) => {
+                  const imageUrl = SECTION_IMAGES[section.id];
+                  return (
+                    <div key={section.id} className="rounded-lg border border-zinc-800 overflow-hidden">
+                      {imageUrl ? (
+                        <div className="relative h-36 w-full">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={imageUrl}
+                            alt=""
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/80 via-zinc-950/20 to-transparent" />
+                        </div>
+                      ) : (
+                        <div className="h-10 bg-zinc-900" />
+                      )}
+                      <div className="p-5">
+                        <h3 className="text-sm font-semibold text-zinc-200 mb-3">
+                          {section.title}
+                        </h3>
+                        <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">
+                          {section.draft}
+                        </p>
+                        <p className="text-xs text-zinc-600 mt-4">
+                          — {section.assignedSme || "Unassigned"} · {section.lastUpdated}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ))}

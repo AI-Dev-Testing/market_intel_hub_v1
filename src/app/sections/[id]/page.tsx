@@ -44,16 +44,24 @@ export default function SectionEditorPage({ params }: { params: Promise<{ id: st
 
   return (
     <div className="max-w-4xl">
-      <div className="flex items-start gap-3 mb-6">
-        <Button
-          variant="ghost"
-          size="sm"
+      {/* Breadcrumb */}
+      <nav className="flex items-center gap-1.5 text-xs text-zinc-500 mb-6">
+        <button
           onClick={() => router.push("/dashboard")}
-          className="text-zinc-400 hover:text-zinc-200 -ml-2 mt-0.5"
+          className="hover:text-zinc-300 transition-colors"
         >
-          ← Dashboard
-        </Button>
-      </div>
+          Dashboard
+        </button>
+        <span>/</span>
+        <button
+          onClick={() => router.push("/dashboard")}
+          className="hover:text-zinc-300 transition-colors"
+        >
+          {section.category}
+        </button>
+        <span>/</span>
+        <span className="text-zinc-300 truncate max-w-xs">{section.title}</span>
+      </nav>
 
       {/* Section Header */}
       <div className="mb-6">
@@ -66,7 +74,6 @@ export default function SectionEditorPage({ params }: { params: Promise<{ id: st
         <h1 className="text-xl font-semibold text-zinc-100 mb-1">{section.title}</h1>
         <div className="flex items-center gap-4 text-xs text-zinc-500">
           <span>SME: {section.assignedSme || <span className="italic text-zinc-600">Unassigned</span>}</span>
-          <span>Category: {section.category}</span>
           <span>Updated: {section.lastUpdated}</span>
         </div>
       </div>
