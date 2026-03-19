@@ -4,7 +4,7 @@
 import { cn } from "@/lib/utils";
 
 interface CategoryFilterProps {
-  categories: string[];
+  categories: readonly string[];
   selected: string | null;
   onSelect: (category: string | null) => void;
 }

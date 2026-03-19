@@ -30,7 +30,7 @@ export default function DashboardPage() {
       <div className="flex gap-6">
         <aside className="w-48 flex-shrink-0">
           <CategoryFilter
-            categories={[...CATEGORIES]}
+            categories={CATEGORIES}
             selected={selectedCategory}
             onSelect={setSelectedCategory}
           />
