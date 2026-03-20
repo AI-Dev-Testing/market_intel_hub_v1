@@ -17,6 +17,14 @@ export interface ReportSection {
   draft: string;
   lastUpdated: string;
   notes: string;
+  sources?: Source[];
+}
+
+export interface Source {
+  title: string;
+  url: string;
+  domain: string;
+  snippet: string;
 }
 
 // Category tree — L0 → L1 → L2

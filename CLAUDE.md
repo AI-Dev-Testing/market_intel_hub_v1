@@ -431,7 +431,7 @@ If business requirements are unclear:
 ```
 
 ### Environment Variables
-Required `.env.local` variables:
+Required `.env.local`lvariables:
 ```
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=
@@ -473,12 +473,74 @@ Before deploying to Vercel:
 2. Implement AI draft generation for a single report section (proof of concept)
 3. Build basic workflow states (Draft > Review > Revision > Approved)
 4. Create a status dashboard showing section progress
+5. Add Tavily API key to Vercel environment variables when deploying
+6. Phase 2 source management: migrate localStorage prefs to Supabase `user_source_prefs` table
+7. Phase 2 generation logs: wire up `generation_logs` table (TODO comment already in `src/app/api/generate-draft/route.ts`)
+8. Phase 2 admin: build `/admin/sources` page for app-wide domain management
 
 ### Questions to Resolve
 - What AI model/provider to use for draft generation (OpenRouter model selection)?
 - What does the report category taxonomy look like in full detail?
 - How many revision cycles are typical before approval?
 - Are there different approval roles (e.g., section reviewer vs. final approver)?
+
+### Phase 2: Source Management (when auth + database are enabled)
+
+#### Database schema required
+
+**`user_source_prefs` table** — per-user whitelist/blacklist
+```sql
+CREATE TABLE user_source_prefs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
+  domain text NOT NULL,
+  type text CHECK (type IN ('whitelist', 'blacklist')) NOT NULL,
+  created_at timestamptz DEFAULT now(),
+  UNIQUE (user_id, domain)
+);
+-- Enable RLS: users can only read/write their own rows
+```
+
+**`app_source_prefs` table** — admin-approved app-wide overrides
+```sql
+CREATE TABLE app_source_prefs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  domain text UNIQUE NOT NULL,
+  type text CHECK (type IN ('whitelist', 'blacklist')) NOT NULL,
+  approved_by uuid REFERENCES auth.users(id),
+  created_at timestamptz DEFAULT now()
+);
+-- Enable RLS: readable by all authenticated users, writable only by admins
+```
+
+**`generation_logs` table** — AI draft request history per section
+```sql
+CREATE TABLE generation_logs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES auth.users(id),
+  section_id text NOT NULL,
+  section_title text NOT NULL,
+  category text NOT NULL,
+  used_web_search boolean DEFAULT false,
+  url_count int DEFAULT 0,
+  has_reference_text boolean DEFAULT false,
+  has_instructions boolean DEFAULT false,
+  instructions_text text,
+  sources jsonb,         -- array of {title, url, domain, snippet}
+  generated_at timestamptz DEFAULT now()
+);
+```
+
+#### Code migration required
+
+- `src/hooks/use-source-preferences.ts` — replace `localStorage` reads/writes with calls to `/api/source-prefs` (GET to load, POST/DELETE to update); merge user prefs with app-wide prefs (app-wide overrides user)
+- `src/app/api/source-prefs/route.ts` — new API route: GET returns merged user + app-wide prefs; POST adds a pref; DELETE removes one
+- `src/app/api/generate-draft/route.ts` — replace `// TODO Phase 2:` comment with actual `db.generationLog.create(...)` call
+- `src/app/admin/sources/page.tsx` — new admin page to manage app-wide whitelist/blacklist; requires admin role check
+
+#### Admin role
+
+Add a `role` column to the Supabase `profiles` table (`'sme' | 'editor' | 'admin'`). Admin routes check `role = 'admin'` via RLS or middleware.
 
 ---
 

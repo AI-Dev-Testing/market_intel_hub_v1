@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useData } from "@/contexts/data-context";
 import { DraftPanel } from "@/components/features/section-editor/draft-panel";
 import { WorkflowControls } from "@/components/features/section-editor/workflow-controls";
-import { SectionStatus, STATUS_COLORS, STATUS_LABELS } from "@/types";
+import { SectionStatus, STATUS_COLORS, STATUS_LABELS, Source } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -36,6 +36,10 @@ export default function SectionEditorPage({ params }: { params: Promise<{ id: st
 
   const handleDraftChange = (draft: string) => {
     updateSection(id, { draft });
+  };
+
+  const handleSourcesChange = (sources: Source[]) => {
+    updateSection(id, { sources });
   };
 
   const handleNotesSave = () => {
@@ -84,6 +88,7 @@ export default function SectionEditorPage({ params }: { params: Promise<{ id: st
           <DraftPanel
             section={section}
             onDraftChange={handleDraftChange}
+            onSourcesChange={handleSourcesChange}
           />
 
           {/* Notes */}

@@ -5,6 +5,37 @@ import { useState } from "react";
 import Link from "next/link";
 import { useData } from "@/contexts/data-context";
 import { SECTION_IMAGES } from "@/lib/data/section-images";
+import { Source } from "@/types";
+
+function SourcesDisclosure({ sources }: { sources: Source[] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mt-3">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors"
+      >
+        {open ? "Hide sources ▲" : `Show sources (${sources.length}) ▼`}
+      </button>
+      {open && (
+        <ul className="mt-2 space-y-1">
+          {sources.map((s) => (
+            <li key={s.url} className="text-xs">
+              <a
+                href={s.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-zinc-500 hover:text-zinc-300 transition-colors"
+              >
+                {s.title} — {s.domain}
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 export default function ReportPage() {
   const { sections, categoryTree, reportMeta } = useData();
@@ -116,6 +147,9 @@ export default function ReportPage() {
                         <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">
                           {section.draft}
                         </p>
+                        {section.sources && section.sources.length > 0 && (
+                          <SourcesDisclosure sources={section.sources} />
+                        )}
                         <p className="text-xs text-zinc-600 mt-4">
                           — {section.assignedSme || "Unassigned"} · {section.lastUpdated}
                         </p>
