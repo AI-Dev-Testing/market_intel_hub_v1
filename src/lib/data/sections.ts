@@ -1,5 +1,5 @@
 // src/lib/data/sections.ts
-import { ReportSection } from "@/types";
+import { CategoryNode, ReportMeta, ReportSection } from "@/types";
 
 export const INITIAL_SECTIONS: ReportSection[] = [
   {
@@ -147,8 +147,74 @@ export const INITIAL_SECTIONS: ReportSection[] = [
   },
 ];
 
+// Kept for backwards-compat with any remaining static imports; context now owns the live tree.
 export const CATEGORIES = [
   "Macroeconomic Topics",
   "Supply Chain Risks",
   "Product Categories",
 ] as const;
+
+export const INITIAL_CATEGORY_TREE: CategoryNode[] = [
+  {
+    id: "cat-macro",
+    name: "Macroeconomic Topics",
+    subcategories: [
+      { id: "sub-gdp",       name: "Global GDP Outlook",         children: [] },
+      { id: "sub-inflation", name: "Inflation & Monetary Policy", children: [] },
+      { id: "sub-fx",        name: "Currency & FX Risk",          children: [] },
+      { id: "sub-rates",     name: "Interest Rate Environment",   children: [] },
+    ],
+  },
+  {
+    id: "cat-sc",
+    name: "Supply Chain Risks",
+    subcategories: [
+      { id: "sub-geo",      name: "Geopolitical Disruptions",   children: [] },
+      { id: "sub-logistic", name: "Logistics & Shipping",        children: [] },
+      { id: "sub-supplier", name: "Supplier Concentration Risk", children: [] },
+    ],
+  },
+  {
+    id: "cat-product",
+    name: "Product Categories",
+    subcategories: [
+      {
+        id: "sub-semi",
+        name: "SEMICONDUCTORS",
+        children: [
+          { id: "sub-semi-analog",    name: "Analog",    children: [] },
+          { id: "sub-semi-discrete",  name: "Discrete",  children: [] },
+          { id: "sub-semi-logic",     name: "Logic",     children: [] },
+          { id: "sub-semi-highend",   name: "High-End",  children: [] },
+        ],
+      },
+      {
+        id: "sub-passive",
+        name: "PASSIVE COMPONENTS",
+        children: [
+          { id: "sub-passive-cap", name: "Capacitors", children: [] },
+        ],
+      },
+      {
+        id: "sub-em",
+        name: "ELECTROMECHANICAL",
+        children: [
+          { id: "sub-em-connectors", name: "Connectors", children: [] },
+        ],
+      },
+    ],
+  },
+];
+
+export const INITIAL_SME_LIST: string[] = [
+  "John Chen",
+  "Sarah Martinez",
+  "David Kim",
+  "Lisa Park",
+  "Marcus Johnson",
+];
+
+export const INITIAL_REPORT_META: ReportMeta = {
+  title: "GPSC Market Intelligence Report",
+  period: "Q2 2026",
+};

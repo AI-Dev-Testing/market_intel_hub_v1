@@ -19,10 +19,53 @@ export interface ReportSection {
   notes: string;
 }
 
+// Category tree — L0 → L1 → L2
+export interface SubcategoryNode {
+  id: string;
+  name: string;
+  children: SubcategoryNode[]; // empty = leaf (L1); populated = L1 with L2 children
+}
+
+export interface CategoryNode {
+  id: string;
+  name: string;
+  subcategories: SubcategoryNode[];
+}
+
+export interface ReportMeta {
+  title: string;
+  period: string;
+}
+
 export interface DataContextValue {
+  // Existing
   sections: ReportSection[];
   getSectionById: (id: string) => ReportSection | undefined;
   updateSection: (id: string, updates: Partial<ReportSection>) => void;
+
+  // Category tree
+  categoryTree: CategoryNode[];
+  addCategory: (name: string) => void;
+  renameCategory: (id: string, name: string) => void;
+  deleteCategory: (id: string) => void;
+  addSubcategory: (parentId: string, name: string) => void;
+  addL2Subcategory: (l1Id: string, name: string) => void;
+  renameSubcategory: (id: string, name: string) => void;
+  deleteSubcategory: (id: string) => void;
+  reorderCategory: (id: string, direction: "up" | "down") => void;
+  reorderSubcategory: (categoryId: string, subcategoryId: string, direction: "up" | "down") => void;
+
+  // Section CRUD
+  addSection: (section: Omit<ReportSection, "lastUpdated">) => void;
+  deleteSection: (id: string) => void;
+
+  // SME management
+  smeList: string[];
+  updateSmeList: (smes: string[]) => void;
+
+  // Report metadata
+  reportMeta: ReportMeta;
+  updateReportMeta: (meta: Partial<ReportMeta>) => void;
 }
 
 export const STATUS_LABELS: Record<SectionStatus, string> = {

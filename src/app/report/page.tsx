@@ -4,20 +4,23 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useData } from "@/contexts/data-context";
-import { CATEGORIES } from "@/lib/data/sections";
 import { SECTION_IMAGES } from "@/lib/data/section-images";
 
 export default function ReportPage() {
-  const { sections } = useData();
+  const { sections, categoryTree, reportMeta } = useData();
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
   const approvedSections = sections.filter((s) => s.status === "approved");
   const totalSections = sections.length;
 
-  const approvedByCategory = CATEGORIES.map((category) => ({
-    category,
-    sections: approvedSections.filter((s) => s.category === category),
-  })).filter((group) => group.sections.length > 0);
+  // Use live category tree order for grouping
+  const categoryNames = categoryTree.map((c) => c.name);
+  const approvedByCategory = categoryNames
+    .map((category) => ({
+      category,
+      sections: approvedSections.filter((s) => s.category === category),
+    }))
+    .filter((group) => group.sections.length > 0);
 
   const visibleCategories = activeCategory
     ? approvedByCategory.filter((g) => g.category === activeCategory)
@@ -29,8 +32,8 @@ export default function ReportPage() {
   return (
     <div className="max-w-3xl">
       <div className="mb-8">
-        <h1 className="text-xl font-semibold text-zinc-100">GPSC Market Intelligence Report</h1>
-        <p className="text-sm text-zinc-400 mt-1">Q2 2026 — Internal Draft</p>
+        <h1 className="text-xl font-semibold text-zinc-100">{reportMeta.title}</h1>
+        <p className="text-sm text-zinc-400 mt-1">{reportMeta.period} — Internal Draft</p>
         <div className="flex items-center gap-4 mt-3 text-xs text-zinc-500">
           <span>{approvedSections.length} of {totalSections} sections approved</span>
           <span suppressHydrationWarning>Generated {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</span>

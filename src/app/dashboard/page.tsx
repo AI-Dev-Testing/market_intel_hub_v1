@@ -7,7 +7,6 @@ import { StatsBar } from "@/components/features/dashboard/stats-bar";
 import { SectionCard } from "@/components/features/dashboard/section-card";
 import { CategoryFilter } from "@/components/features/dashboard/category-filter";
 import { ProgressBanner } from "@/components/features/dashboard/progress-banner";
-import { CATEGORIES } from "@/lib/data/sections";
 
 const STATUS_PRIORITY: Record<SectionStatus, number> = {
   revision_needed: 0,
@@ -18,7 +17,8 @@ const STATUS_PRIORITY: Record<SectionStatus, number> = {
 };
 
 export default function DashboardPage() {
-  const { sections } = useData();
+  const { sections, categoryTree, reportMeta } = useData();
+  const categories = categoryTree.map((c) => c.name);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<SectionStatus | null>(null);
 
@@ -37,7 +37,7 @@ export default function DashboardPage() {
       <div className="mb-6">
         <h1 className="text-xl font-semibold text-zinc-100">Report Dashboard</h1>
         <p className="text-sm text-zinc-400 mt-1">
-          Q2 2026 Market Intelligence Report
+          {reportMeta.period} {reportMeta.title}
         </p>
       </div>
 
@@ -52,7 +52,7 @@ export default function DashboardPage() {
       <div className="flex gap-6">
         <aside className="w-48 flex-shrink-0">
           <CategoryFilter
-            categories={CATEGORIES}
+            categories={categories}
             selected={selectedCategory}
             onSelect={setSelectedCategory}
             sections={sections}
