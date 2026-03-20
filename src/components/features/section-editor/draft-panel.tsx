@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { ReportSection, Source } from "@/types";
 import { useSourcePreferences } from "@/hooks/use-source-preferences";
+import { useData } from "@/contexts/data-context";
 import { cn } from "@/lib/utils";
 
 interface DraftPanelProps {
@@ -36,8 +37,16 @@ export function DraftPanel({ section, onDraftChange, onSourcesChange }: DraftPan
   const [referenceText, setReferenceText] = useState("");
   const [instructions, setInstructions] = useState("");
   const [sources, setSources] = useState<Source[]>([]);
+  const [showBlacklist, setShowBlacklist] = useState(false);
 
+  const { promptConfig } = useData();
   const { whitelist, blacklist, addToWhitelist, addToBlacklist, removePreference, getDomainStatus } = useSourcePreferences();
+
+  // Resolve effective prompt: section override → universal
+  const effectiveSystemPrompt =
+    section.promptOverride?.systemPrompt ?? promptConfig.current.systemPrompt;
+  const effectiveUserPromptTemplate =
+    section.promptOverride?.userPromptTemplate ?? promptConfig.current.userPromptTemplate;
 
   const handleDraftChange = (value: string) => {
     setDraft(value);
@@ -47,6 +56,10 @@ export function DraftPanel({ section, onDraftChange, onSourcesChange }: DraftPan
   const handleSave = () => {
     onDraftChange(draft);
     setHasUnsavedChanges(false);
+  };
+
+  const extractDomain = (url: string): string => {
+    try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return ""; }
   };
 
   const addUrl = () => {
@@ -60,6 +73,9 @@ export function DraftPanel({ section, onDraftChange, onSourcesChange }: DraftPan
     setUrls((prev) => [...prev, trimmed]);
     setUrlInput("");
     setError(null);
+    // Auto-whitelist the domain so it is prioritised in future web searches
+    const domain = extractDomain(trimmed);
+    if (domain) addToWhitelist(domain);
   };
 
   const removeUrl = (url: string) => {
@@ -99,6 +115,8 @@ export function DraftPanel({ section, onDraftChange, onSourcesChange }: DraftPan
           useWebSearch,
           whitelist,
           blacklist,
+          systemPrompt: effectiveSystemPrompt || undefined,
+          userPromptTemplate: effectiveUserPromptTemplate || undefined,
         }),
       });
       const data = await response.json();
@@ -176,26 +194,57 @@ export function DraftPanel({ section, onDraftChange, onSourcesChange }: DraftPan
                 onClick={() => setUseWebSearch((v) => !v)}
                 className={cn(
                   "relative w-9 h-5 rounded-full transition-colors flex-shrink-0",
-                  useWebSearch ? "bg-zinc-400" : "bg-zinc-700"
+                  useWebSearch ? "bg-blue-500" : "bg-zinc-700"
                 )}
               >
                 <span
                   className={cn(
-                    "absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform",
-                    useWebSearch ? "translate-x-4" : "translate-x-0.5"
+                    "absolute top-0.5 left-0 w-4 h-4 rounded-full bg-white shadow transition-transform",
+                    useWebSearch ? "translate-x-[18px]" : "translate-x-0.5"
                   )}
                 />
               </button>
             </div>
 
-            {/* Whitelist/Blacklist summary (shown only when web search is on) */}
-            {useWebSearch && (whitelist.length > 0 || blacklist.length > 0) && (
-              <div className="text-xs text-zinc-600 space-y-1">
+            {/* Source Preferences */}
+            {(whitelist.length > 0 || blacklist.length > 0) && (
+              <div className="space-y-2 border-t border-zinc-800/50 pt-3">
+                <p className="text-xs font-medium text-zinc-500">Source Preferences</p>
+
                 {whitelist.length > 0 && (
-                  <p>✓ Prioritised: {whitelist.join(", ")}</p>
+                  <div className="space-y-1.5">
+                    <p className="text-xs text-zinc-600">Prioritised in web search</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {whitelist.map((domain) => (
+                        <span key={domain} className="flex items-center gap-1 bg-green-950/40 border border-green-900/50 text-green-400 text-xs px-2 py-0.5 rounded-full">
+                          {domain}
+                          <button onClick={() => removePreference(domain)} className="text-green-700 hover:text-green-300 ml-0.5 leading-none" title="Remove">×</button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 )}
+
                 {blacklist.length > 0 && (
-                  <p>✗ Excluded: {blacklist.join(", ")}</p>
+                  <div className="space-y-1.5">
+                    <button
+                      onClick={() => setShowBlacklist((v) => !v)}
+                      className="flex items-center gap-1.5 text-xs text-zinc-600 hover:text-zinc-400 transition-colors"
+                    >
+                      <span className="bg-zinc-800 text-zinc-500 px-1.5 py-0.5 rounded">{blacklist.length} excluded</span>
+                      <span>{showBlacklist ? "▲ hide" : "▼ show"}</span>
+                    </button>
+                    {showBlacklist && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {blacklist.map((domain) => (
+                          <span key={domain} className="flex items-center gap-1 bg-red-950/20 border border-red-900/30 text-red-400/70 text-xs px-2 py-0.5 rounded-full">
+                            {domain}
+                            <button onClick={() => removePreference(domain)} className="text-red-700 hover:text-red-300 ml-0.5 leading-none" title="Remove exclusion">×</button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             )}

@@ -1,7 +1,7 @@
 // src/app/api/generate-draft/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { generateDraft, Reference } from "@/lib/openrouter/client";
-import { searchWeb } from "@/lib/tavily/client";
+import { searchWeb, extractUrls, ExtractResult } from "@/lib/tavily/client";
 import { Source } from "@/types";
 
 const MAX_URL_CONTENT_CHARS = 3000;
@@ -48,7 +48,7 @@ async function fetchUrl(url: string): Promise<{ content?: string; error?: string
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { sectionTitle, category, subcategory, references, instructions, useWebSearch } = body;
+    const { sectionTitle, category, subcategory, references, instructions, useWebSearch, systemPrompt, userPromptTemplate } = body;
 
     if (!sectionTitle || !category || !subcategory) {
       return NextResponse.json(
@@ -71,19 +71,45 @@ export async function POST(request: NextRequest) {
       const urlRefs = references.filter((r: Reference) => r.type === "url").slice(0, MAX_URLS);
       const textRefs = references.filter((r: Reference) => r.type === "text");
 
-      const fetchResults = await Promise.all(
+      // Step 1: direct fetch for all URL references
+      const directResults = await Promise.all(
         urlRefs.map(async (ref: Reference) => {
           const result = await fetchUrl(ref.content);
           return { ref, result };
         })
       );
 
-      for (const { ref, result } of fetchResults) {
+      // Step 2: batch Tavily extract for anything that failed direct fetch
+      const failed = directResults.filter(({ result }) => !result.content);
+      let extractResults: ExtractResult[] = [];
+      if (failed.length > 0 && process.env.TAVILY_API_KEY) {
+        try {
+          extractResults = await extractUrls(failed.map(({ ref }) => ref.content));
+        } catch {
+          // non-fatal
+        }
+      }
+      const extractMap = new Map(extractResults.map((r) => [r.url, r]));
+
+      // Step 3: build resolved references + actionable warnings
+      for (const { ref, result } of directResults) {
         if (result.content) {
           resolvedReferences.push({ ...ref, fetchedContent: result.content });
         } else {
-          resolvedReferences.push({ ...ref, fetchError: result.error });
-          urlWarnings.push(`Could not fetch ${ref.content}: ${result.error}`);
+          const extracted = extractMap.get(ref.content);
+          if (extracted?.content) {
+            resolvedReferences.push({ ...ref, fetchedContent: extracted.content });
+          } else {
+            const reason = result.error ?? "Unknown error";
+            let tip = "";
+            if (reason.includes("401") || reason.includes("403")) {
+              tip = " — site requires login. Paste the article text in Reference Text instead, or enable Web Search.";
+            } else if (reason.includes("Non-text")) {
+              tip = " — not a readable web page (PDF or media file).";
+            }
+            resolvedReferences.push({ ...ref, fetchError: reason });
+            urlWarnings.push(`Could not fetch ${ref.content}: ${reason}${tip}`);
+          }
         }
       }
 
@@ -128,6 +154,8 @@ export async function POST(request: NextRequest) {
       references: resolvedReferences,
       instructions: instructions ?? "",
       webSources,
+      ...(systemPrompt ? { systemPrompt } : {}),
+      ...(userPromptTemplate ? { userPromptTemplate } : {}),
     });
 
     return NextResponse.json({

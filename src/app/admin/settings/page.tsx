@@ -4,18 +4,24 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useData } from "@/contexts/data-context";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export default function AdminSettingsPage() {
-  const { reportMeta, updateReportMeta } = useData();
+  const { reportMeta, updateReportMeta, isSummaryLoading, regenerateSummary } = useData();
   const [title, setTitle] = useState(reportMeta.title);
   const [period, setPeriod] = useState(reportMeta.period);
+  const [published, setPublished] = useState(reportMeta.published);
   const [saved, setSaved] = useState(false);
 
-  const isDirty = title !== reportMeta.title || period !== reportMeta.period;
+  const isDirty =
+    title !== reportMeta.title ||
+    period !== reportMeta.period ||
+    published !== reportMeta.published;
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    updateReportMeta({ title: title.trim(), period: period.trim() });
+    updateReportMeta({ title: title.trim(), period: period.trim(), published });
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
@@ -59,6 +65,38 @@ export default function AdminSettingsPage() {
           </p>
         </div>
 
+        {/* Report Phase toggle */}
+        <div className="space-y-2">
+          <label className="block text-xs text-zinc-400">Report phase</label>
+          <div className="flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3">
+            <div>
+              <p className="text-sm font-medium text-zinc-300">
+                {published ? "Published" : "Drafting"}
+              </p>
+              <p className="text-xs text-zinc-600">
+                {published
+                  ? "Report is live — executive summary auto-updates when sections are approved"
+                  : "Report is in drafting phase — summary will not auto-update"}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => { setPublished((v) => !v); }}
+              className={cn(
+                "relative w-11 h-6 rounded-full transition-colors flex-shrink-0",
+                published ? "bg-blue-500" : "bg-zinc-700"
+              )}
+            >
+              <span
+                className={cn(
+                  "absolute top-1 left-0 w-4 h-4 rounded-full bg-white shadow transition-transform",
+                  published ? "translate-x-6" : "translate-x-1"
+                )}
+              />
+            </button>
+          </div>
+        </div>
+
         <div className="flex items-center gap-3 pt-2">
           <button
             type="submit"
@@ -73,7 +111,37 @@ export default function AdminSettingsPage() {
         </div>
       </form>
 
-      <div className="mt-10 border-t border-zinc-800 pt-6">
+      {/* Executive Summary */}
+      <div className="mt-8 space-y-3 pt-6 border-t border-zinc-800">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-medium text-zinc-200">Executive Summary</h3>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={regenerateSummary}
+            disabled={isSummaryLoading}
+          >
+            {isSummaryLoading ? "Generating..." : "Regenerate Summary"}
+          </Button>
+        </div>
+        <p className="text-xs text-zinc-600">
+          AI-generated summary of all approved sections.{" "}
+          {reportMeta.summaryUpdatedAt
+            ? `Last updated ${new Date(reportMeta.summaryUpdatedAt).toLocaleString()}.`
+            : "Not yet generated."}
+        </p>
+        {reportMeta.executiveSummary ? (
+          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 text-xs text-zinc-400 whitespace-pre-wrap leading-relaxed">
+            {reportMeta.executiveSummary}
+          </div>
+        ) : (
+          <p className="text-xs text-zinc-600 italic">
+            No summary yet — click &quot;Regenerate Summary&quot; to generate one.
+          </p>
+        )}
+      </div>
+
+      <div className="mt-8 border-t border-zinc-800 pt-6">
         <p className="text-xs text-zinc-500">
           <strong className="text-zinc-400">Note:</strong> All data is held in memory and resets on page refresh (Phase 1 prototype). Database persistence will be added in Phase 2.
         </p>

@@ -7,6 +7,11 @@ export type SectionStatus =
   | "revision_needed"
   | "approved";
 
+export interface SectionPromptOverride {
+  systemPrompt?: string;
+  userPromptTemplate?: string;
+}
+
 export interface ReportSection {
   id: string;
   title: string;
@@ -18,6 +23,7 @@ export interface ReportSection {
   lastUpdated: string;
   notes: string;
   sources?: Source[];
+  promptOverride?: SectionPromptOverride;
 }
 
 export interface Source {
@@ -43,6 +49,23 @@ export interface CategoryNode {
 export interface ReportMeta {
   title: string;
   period: string;
+  published: boolean;
+  executiveSummary: string;
+  summaryUpdatedAt?: string;
+}
+
+// Prompt versioning
+export interface PromptVersion {
+  version: number;
+  systemPrompt: string;
+  userPromptTemplate: string;
+  savedAt: string; // ISO date string
+  note: string;
+}
+
+export interface PromptConfig {
+  current: PromptVersion;
+  history: PromptVersion[]; // newest-first, max 10
 }
 
 export interface DataContextValue {
@@ -74,6 +97,15 @@ export interface DataContextValue {
   // Report metadata
   reportMeta: ReportMeta;
   updateReportMeta: (meta: Partial<ReportMeta>) => void;
+  isSummaryLoading: boolean;
+  regenerateSummary: () => Promise<void>;
+
+  // Prompt management
+  promptConfig: PromptConfig;
+  saveUniversalPrompt: (systemPrompt: string, userPromptTemplate: string, note: string) => void;
+  rollbackUniversalPrompt: (version: number) => void;
+  setSectionPromptOverride: (sectionId: string, override: SectionPromptOverride) => void;
+  clearSectionPromptOverride: (sectionId: string) => void;
 }
 
 export const STATUS_LABELS: Record<SectionStatus, string> = {

@@ -73,3 +73,56 @@ export async function searchWeb(params: TavilySearchParams): Promise<Source[]> {
     snippet: r.content?.slice(0, 400) ?? "",
   }));
 }
+
+export interface ExtractResult {
+  url: string;
+  content?: string;
+  error?: string;
+}
+
+export async function extractUrls(urls: string[]): Promise<ExtractResult[]> {
+  const apiKey = process.env.TAVILY_API_KEY;
+  if (!apiKey) return urls.map((url) => ({ url, error: "TAVILY_API_KEY not configured" }));
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 20000);
+
+  let response: Response;
+  try {
+    response = await fetch("https://api.tavily.com/extract", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({ urls, include_images: false }),
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
+  if (!response.ok) {
+    const errText = await response.text();
+    return urls.map((url) => ({ url, error: `Tavily extract error: ${response.status} — ${errText}` }));
+  }
+
+  const data: {
+    results: { url: string; raw_content: string }[];
+    failed_results: { url: string; error: string }[];
+  } = await response.json();
+
+  const resultMap = new Map<string, string>();
+  for (const r of data.results ?? []) {
+    resultMap.set(r.url, r.raw_content?.slice(0, 3000) ?? "");
+  }
+  const errorMap = new Map<string, string>();
+  for (const r of data.failed_results ?? []) {
+    errorMap.set(r.url, r.error);
+  }
+
+  return urls.map((url) => {
+    if (resultMap.has(url)) return { url, content: resultMap.get(url) };
+    return { url, error: errorMap.get(url) ?? "No content extracted" };
+  });
+}

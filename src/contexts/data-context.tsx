@@ -1,11 +1,13 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, useRef, useEffect, useCallback, ReactNode } from "react";
 import {
   CategoryNode,
   DataContextValue,
+  PromptConfig,
   ReportMeta,
   ReportSection,
+  SectionPromptOverride,
   SubcategoryNode,
 } from "@/types";
 import {
@@ -13,6 +15,7 @@ import {
   INITIAL_CATEGORY_TREE,
   INITIAL_SME_LIST,
   INITIAL_REPORT_META,
+  INITIAL_PROMPT_CONFIG,
 } from "@/lib/data/sections";
 
 const DataContext = createContext<DataContextValue | null>(null);
@@ -48,6 +51,35 @@ function deleteFromTree(
     .map((n) => ({ ...n, children: deleteFromTree(n.children, id) }));
 }
 
+// Returns the old subcategory string stored on sections for a given subcategory node id,
+// plus a factory to build the new string given the new name.
+function findSubcategoryContext(
+  tree: CategoryNode[],
+  id: string
+): { oldSub: string; newSub: (name: string) => string; isL1WithChildren: boolean } | null {
+  for (const cat of tree) {
+    for (const sub of cat.subcategories) {
+      if (sub.id === id) {
+        return {
+          oldSub: sub.name,
+          newSub: (n) => n,
+          isL1WithChildren: sub.children.length > 0,
+        };
+      }
+      for (const child of sub.children) {
+        if (child.id === id) {
+          return {
+            oldSub: `${sub.name} > ${child.name}`,
+            newSub: (n) => `${sub.name} > ${n}`,
+            isL1WithChildren: false,
+          };
+        }
+      }
+    }
+  }
+  return null;
+}
+
 function reorder<T>(arr: T[], index: number, direction: "up" | "down"): T[] {
   const next = [...arr];
   const swap = direction === "up" ? index - 1 : index + 1;
@@ -64,6 +96,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
     useState<CategoryNode[]>(INITIAL_CATEGORY_TREE);
   const [smeList, setSmeList] = useState<string[]>(INITIAL_SME_LIST);
   const [reportMeta, setReportMeta] = useState<ReportMeta>(INITIAL_REPORT_META);
+  const [promptConfig, setPromptConfig] = useState<PromptConfig>(INITIAL_PROMPT_CONFIG);
+  const [isSummaryLoading, setIsSummaryLoading] = useState(false);
+
+  // Refs used by the auto-trigger effect to avoid stale closures and dependency loops
+  const publishedRef = useRef(INITIAL_REPORT_META.published);
+  publishedRef.current = reportMeta.published;
+  const lastApprovedIdsRef = useRef<Set<string>>(
+    new Set(INITIAL_SECTIONS.filter((s) => s.status === "approved").map((s) => s.id))
+  );
 
   // ---- existing section methods ----
 
@@ -97,9 +138,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
 
   const renameCategory = (id: string, name: string) => {
+    const oldName = categoryTree.find((c) => c.id === id)?.name;
     setCategoryTree((prev) =>
       prev.map((c) => (c.id === id ? { ...c, name } : c))
     );
+    if (oldName && oldName !== name) {
+      setSections((prev) =>
+        prev.map((s) => s.category === oldName ? { ...s, category: name } : s)
+      );
+    }
   };
 
   const deleteCategory = (id: string) => {
@@ -144,12 +191,28 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
 
   const renameSubcategory = (id: string, name: string) => {
+    const ctx = findSubcategoryContext(categoryTree, id);
     setCategoryTree((prev) =>
       prev.map((c) => ({
         ...c,
         subcategories: renameInTree(c.subcategories, id, name),
       }))
     );
+    if (ctx) {
+      setSections((prev) =>
+        prev.map((s) => {
+          if (ctx.isL1WithChildren) {
+            // L1 node with children: sections store "OldL1Name > ChildName"
+            if (s.subcategory.startsWith(ctx.oldSub + " > ")) {
+              return { ...s, subcategory: name + " > " + s.subcategory.slice(ctx.oldSub.length + 3) };
+            }
+          } else if (s.subcategory === ctx.oldSub) {
+            return { ...s, subcategory: ctx.newSub(name) };
+          }
+          return s;
+        })
+      );
+    }
   };
 
   const deleteSubcategory = (id: string) => {
@@ -179,10 +242,103 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const updateSmeList = (smes: string[]) => setSmeList(smes);
 
+  // ---- executive summary ----
+
+  const regenerateSummary = useCallback(async () => {
+    const approved = sections.filter((s) => s.status === "approved");
+    if (approved.length === 0) return;
+    setIsSummaryLoading(true);
+    try {
+      const res = await fetch("/api/executive-summary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sections: approved.map((s) => ({ title: s.title, category: s.category, draft: s.draft })),
+          reportTitle: reportMeta.title,
+          reportPeriod: reportMeta.period,
+        }),
+      });
+      const data = await res.json();
+      if (data.summary) {
+        setReportMeta((prev) => ({
+          ...prev,
+          executiveSummary: data.summary,
+          summaryUpdatedAt: new Date().toISOString(),
+        }));
+      }
+    } catch (err) {
+      console.error("[regenerateSummary]", err);
+    } finally {
+      setIsSummaryLoading(false);
+    }
+  }, [sections, reportMeta.title, reportMeta.period]);
+
+  // Auto-trigger: regenerate summary when a new section is approved and report is published
+  useEffect(() => {
+    const approvedIds = new Set(
+      sections.filter((s) => s.status === "approved").map((s) => s.id)
+    );
+    const hasNewApproval = [...approvedIds].some(
+      (id) => !lastApprovedIdsRef.current.has(id)
+    );
+    if (hasNewApproval && publishedRef.current) {
+      regenerateSummary();
+    }
+    lastApprovedIdsRef.current = approvedIds;
+  }, [sections]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ---- report metadata ----
 
   const updateReportMeta = (meta: Partial<ReportMeta>) =>
     setReportMeta((prev) => ({ ...prev, ...meta }));
+
+  // ---- prompt management ----
+
+  const saveUniversalPrompt = (
+    systemPrompt: string,
+    userPromptTemplate: string,
+    note: string
+  ) => {
+    setPromptConfig((prev) => {
+      const newVersion = prev.current.version + 1;
+      const newHistory = [prev.current, ...prev.history].slice(0, 10);
+      return {
+        current: {
+          version: newVersion,
+          systemPrompt,
+          userPromptTemplate,
+          savedAt: today(),
+          note: note.trim() || `Version ${newVersion}`,
+        },
+        history: newHistory,
+      };
+    });
+  };
+
+  const rollbackUniversalPrompt = (version: number) => {
+    setPromptConfig((prev) => {
+      const target = prev.history.find((h) => h.version === version);
+      if (!target) return prev;
+      const newHistory = [prev.current, ...prev.history.filter((h) => h.version !== version)].slice(0, 10);
+      return { current: target, history: newHistory };
+    });
+  };
+
+  const setSectionPromptOverride = (sectionId: string, override: SectionPromptOverride) => {
+    setSections((prev) =>
+      prev.map((s) => (s.id === sectionId ? { ...s, promptOverride: override } : s))
+    );
+  };
+
+  const clearSectionPromptOverride = (sectionId: string) => {
+    setSections((prev) =>
+      prev.map((s) => {
+        if (s.id !== sectionId) return s;
+        const { promptOverride: _, ...rest } = s;
+        return rest as ReportSection;
+      })
+    );
+  };
 
   return (
     <DataContext.Provider
@@ -206,6 +362,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
         updateSmeList,
         reportMeta,
         updateReportMeta,
+        isSummaryLoading,
+        regenerateSummary,
+        promptConfig,
+        saveUniversalPrompt,
+        rollbackUniversalPrompt,
+        setSectionPromptOverride,
+        clearSectionPromptOverride,
       }}
     >
       {children}

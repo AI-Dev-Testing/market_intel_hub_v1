@@ -82,6 +82,35 @@ export default function ReportPage() {
         )}
       </div>
 
+      {/* Executive Summary */}
+      {reportMeta.executiveSummary && (
+        <div className="mb-8 rounded-lg border border-zinc-800 bg-zinc-900/40 p-5">
+          <h2 className="text-sm font-semibold text-zinc-200 mb-3">Executive Summary</h2>
+          <ul className="space-y-2">
+            {reportMeta.executiveSummary
+              .split("\n")
+              .filter((line) => line.trim().startsWith("•"))
+              .map((line, i) => (
+                <li key={i} className="flex gap-2 text-sm text-zinc-300 leading-relaxed">
+                  <span className="text-zinc-500 flex-shrink-0 mt-0.5">•</span>
+                  <span
+                    dangerouslySetInnerHTML={{
+                      __html: line
+                        .replace(/^•\s*/, "")
+                        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>"),
+                    }}
+                  />
+                </li>
+              ))}
+          </ul>
+          {reportMeta.summaryUpdatedAt && (
+            <p className="text-xs text-zinc-600 mt-3">
+              Summary generated {new Date(reportMeta.summaryUpdatedAt).toLocaleString()}
+            </p>
+          )}
+        </div>
+      )}
+
       {approvedByCategory.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-8">
           <button

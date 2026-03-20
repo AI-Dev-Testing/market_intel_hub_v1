@@ -35,6 +35,12 @@ const adminModules = [
     description: "Override section statuses, bulk-reset sections, and monitor sections awaiting action.",
     icon: "🔁",
   },
+  {
+    href: "/admin/prompts",
+    title: "Prompt Management",
+    description: "Edit the universal AI prompt template, manage version history, and add per-section prompt overrides.",
+    icon: "🤖",
+  },
 ];
 
 export default function AdminPage() {

@@ -1,5 +1,5 @@
 // src/lib/data/sections.ts
-import { CategoryNode, ReportMeta, ReportSection } from "@/types";
+import { CategoryNode, PromptConfig, ReportMeta, ReportSection } from "@/types";
 
 export const INITIAL_SECTIONS: ReportSection[] = [
   {
@@ -217,4 +217,37 @@ export const INITIAL_SME_LIST: string[] = [
 export const INITIAL_REPORT_META: ReportMeta = {
   title: "GPSC Market Intelligence Report",
   period: "Q2 2026",
+  published: false,
+  executiveSummary: "",
+};
+
+// The initial universal prompt — extracted verbatim from the original hardcoded buildPrompt()
+// function in src/lib/openrouter/client.ts, with dynamic values replaced by {{placeholders}}.
+export const DEFAULT_USER_PROMPT_TEMPLATE = `You are a market intelligence analyst writing a section for a GPSC (Government and Public Sector Contracts) Market Intelligence Report.
+
+Write a concise 2-3 paragraph intelligence brief for the following section:
+
+Section Title: {{title}}
+Category: {{category}}
+Subcategory: {{subcategory}}
+Report Date: {{period}}
+
+Requirements:
+- Write in a professional, factual intelligence report style
+- Include specific data points, trends, and forward-looking statements where appropriate
+- Focus on supply chain, procurement, and market conditions relevant to GPSC buyers
+- Keep each paragraph 3-5 sentences
+- Do NOT use headers, bullet points, or markdown formatting — plain prose only{{references}}{{webSources}}{{instructions}}
+
+Begin writing the intelligence brief now:`;
+
+export const INITIAL_PROMPT_CONFIG: PromptConfig = {
+  current: {
+    version: 1,
+    systemPrompt: "",
+    userPromptTemplate: DEFAULT_USER_PROMPT_TEMPLATE,
+    savedAt: "2026-03-15",
+    note: "Initial prompt",
+  },
+  history: [],
 };
