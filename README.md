@@ -21,9 +21,11 @@ Create `.env.local` in the project root:
 
 ```
 OPENROUTER_API_KEY=your_key_here
+TAVILY_API_KEY=your_key_here
 ```
 
-Get an API key at [openrouter.ai](https://openrouter.ai). The app uses `openai/gpt-4o-mini` by default.
+- **OpenRouter** — get a key at [openrouter.ai](https://openrouter.ai). The app uses `openai/gpt-4o-mini` by default.
+- **Tavily** — get a free key at [tavily.com](https://tavily.com) (1,000 searches/month on the free tier). Required only when using the Web Search toggle.
 
 ---
 
@@ -48,6 +50,7 @@ Get an API key at [openrouter.ai](https://openrouter.ai). The app uses `openai/g
 - Shows only approved sections, grouped by category
 - **Category filter bar** — pill buttons to isolate a single category; click "All sections" or the active pill again to reset
 - Actionable warning banner links back to the dashboard when sections are still pending
+- **Sources disclosure** — sections generated with Web Search show a collapsed "Show sources (N) ▼" link; click to reveal the clickable source list
 
 ### Admin (`/admin`)
 - Central hub for all administrative controls — see [Admin Guide](#admin-guide) below
@@ -56,7 +59,28 @@ Get an API key at [openrouter.ai](https://openrouter.ai). The app uses `openai/g
 
 ## AI Generation
 
-Each section editor has a **"Generate with AI"** / **"Regenerate with AI"** button. Below it, an expandable **"AI References & Instructions"** panel gives SMEs three ways to guide the output:
+Each section editor has a **"Generate with AI"** / **"Regenerate with AI"** button. Below it, an expandable **"AI References & Instructions"** panel gives SMEs four ways to guide the output:
+
+### Web Search
+An opt-in toggle (off by default). When enabled, the server queries the [Tavily](https://tavily.com) search API for the latest electronics and supply-chain news before generating the draft. Results are injected into the AI prompt as *Latest Web Intelligence*.
+
+- Requires `TAVILY_API_KEY` in `.env.local`
+- The badge on the collapsed panel header counts Web Search as one active option when the toggle is on
+- After generation, a **Sources used (N)** panel appears listing each article with its domain
+
+#### Source Whitelist & Blacklist
+Each source card has two controls:
+
+| Button | Behaviour |
+|---|---|
+| **Prioritise** | Adds the domain to your whitelist — Tavily results from that domain are sorted to the top in future searches |
+| **Exclude** | Adds the domain to your blacklist — passed directly to Tavily's `exclude_domains` parameter so that domain is filtered out at search time |
+
+Clicking an active button (green Prioritised / red Excluded) removes the preference. Whitelisting a domain automatically removes it from the blacklist and vice versa.
+
+Preferences are stored in `localStorage` under the keys `gpsc_source_whitelist` and `gpsc_source_blacklist` and persist across sessions. When the toggle is on, the current whitelist/blacklist is summarised inside the AI Options panel.
+
+> **Phase 2:** Preferences will migrate to a per-user `user_source_prefs` Supabase table with admin-managed app-wide overrides.
 
 ### Reference URLs
 Paste one or more URLs (up to 5). The server fetches each URL in parallel, strips HTML to readable text, and injects the content into the AI prompt as reference material.
@@ -75,10 +99,10 @@ Free-form directions for the AI:
 - Remove content: `"Remove the paragraph about pricing"`
 - Combine: `"Shorten to 2 paragraphs, focus on risk factors, use a cautious tone"`
 
-The **badge** on the collapsed panel header shows how many of the three option types are currently active.
+The **badge** on the collapsed panel header shows how many of the four option types are currently active.
 
 ### Server-side logging
-Every generation request is logged to the console with structured metadata (section title, category, URL count, whether text/instructions were provided). A `// TODO Phase 2:` comment in `src/app/api/generate-draft/route.ts` marks where to add database persistence once Supabase is connected.
+Every generation request is logged to the console with structured metadata (section title, category, URL count, web search flag, whether text/instructions were provided). A `// TODO Phase 2:` comment in `src/app/api/generate-draft/route.ts` marks where to add database persistence once Supabase is connected.
 
 ---
 
@@ -242,7 +266,7 @@ src/
       team/page.tsx                 # SME management
       settings/page.tsx             # Report title and period
       workflow/page.tsx             # Status overrides and bulk reset
-    api/generate-draft/route.ts     # OpenRouter proxy + URL fetching
+    api/generate-draft/route.ts     # OpenRouter proxy + URL fetching + Tavily search
   components/
     features/
       dashboard/
@@ -252,13 +276,16 @@ src/
         progress-banner.tsx         # Report completion progress bar
       nav/main-nav.tsx              # Top navigation
       section-editor/
-        draft-panel.tsx             # Draft editor + AI references UI
+        draft-panel.tsx             # Draft editor + AI references + web search UI
         workflow-controls.tsx       # Status pipeline stepper + action buttons
   contexts/data-context.tsx         # In-memory state + all CRUD methods
+  hooks/
+    use-source-preferences.ts       # localStorage whitelist/blacklist hook
   lib/
     data/sections.ts                # Seed data (sections, category tree, SMEs, report meta)
     data/section-images.ts          # Unsplash image URL map per section ID
     openrouter/client.ts            # OpenRouter API client + prompt builder
+    tavily/client.ts                # Tavily web search client
   types/index.ts                    # All TypeScript interfaces and constants
 ```
 
@@ -273,3 +300,4 @@ When the core workflow is validated, Phase 2 will add:
 - **AI generation logs** — full request history per section (hook point already in code)
 - **Rich text editor** — formatted drafts instead of plain text
 - **Multi-user assignment** — claim/assign sections to specific SMEs
+- **Source management database** — migrate `localStorage` whitelist/blacklist to per-user `user_source_prefs` table; admin-managed app-wide `app_source_prefs` overrides; `/admin/sources` management page
