@@ -463,26 +463,72 @@ Before deploying to Vercel:
 ## Project-Specific Notes
 
 ### Current Phase
-**Phase 1: Prototype** — Initializing the project and building the core internal collaboration workflow. Focus on report structure, AI draft generation, and the revision/approval pipeline. No authentication, no database, no external publishing yet.
+**Phase 1: Prototype — Core workflow complete, ready for real-world validation.**
 
-### Known Issues
-- Project just initialized — no known issues yet
+The full internal collaboration loop is implemented and working with seed data. The tool is ready for the project owner to trial with actual report content before Phase 2 (database + auth) begins.
 
-### Next Priorities
-1. Build report structure UI with hierarchical categories/sub-categories
-2. Implement AI draft generation for a single report section (proof of concept)
-3. Build basic workflow states (Draft > Review > Revision > Approved)
-4. Create a status dashboard showing section progress
-5. Add Tavily API key to Vercel environment variables when deploying
-6. Phase 2 source management: migrate localStorage prefs to Supabase `user_source_prefs` table
-7. Phase 2 generation logs: wire up `generation_logs` table (TODO comment already in `src/app/api/generate-draft/route.ts`)
-8. Phase 2 admin: build `/admin/sources` page for app-wide domain management
+---
 
-### Questions to Resolve
-- What AI model/provider to use for draft generation (OpenRouter model selection)?
-- What does the report category taxonomy look like in full detail?
-- How many revision cycles are typical before approval?
-- Are there different approval roles (e.g., section reviewer vs. final approver)?
+### What Is Built (as of 2026-03-19)
+
+#### Core Workflow
+- **Dashboard** (`/dashboard`): Progress banner (% complete, approved/in-progress/pending counts), status filter tabs (Pending / Draft / In Review / Revision Needed / Approved), category sidebar filter, section cards with status badge, SME name, draft preview, and contextual CTA ("Start draft →", "Continue editing →", "Address feedback →", "View section →").
+- **Section Editor** (`/sections/[id]`): Full section view with metadata (category, subcategory, SME assignment, status badge). Tabbed panels: Draft Content, Notes, Sources, Prompt Override. Workflow controls for status transitions. Sections can be opened from the dashboard or directly by URL.
+- **Report View** (`/report`): Consolidated view of all approved sections grouped by category. Category filter tabs. Section images (where configured). Collapsible sources disclosure per section. AI-generated Executive Summary (bullet-point format, regeneratable on demand).
+- **Status workflow**: Five-state pipeline — `pending → draft → in_review → (approved | revision_needed) → in_review`. Transitions enforced with labelled buttons; invalid transitions are blocked by type system.
+
+#### AI Draft Generation
+- **Generate / Regenerate with AI** button on every section editor.
+- Sends section title, category, subcategory to `/api/generate-draft` (POST).
+- **Web Search** toggle: uses Tavily API to retrieve up to 5 recent web sources, sorted by domain whitelist.
+- **Reference URLs**: paste URLs — server fetches content directly, falls back to Tavily Extract for paywalled/blocked pages. Failed URLs produce actionable warnings with tips.
+- **Reference Text**: paste raw excerpts or data for the AI to draw from.
+- **Editing Instructions**: free-text field for tone, focus, or removal directives.
+- **Source Preferences**: per-session whitelist (green chips, always visible) and blacklist (collapsed count badge, expandable). Domains auto-whitelisted when a reference URL is added. Persisted via `localStorage` until Phase 2.
+- **Prompt Management**: universal system prompt + user prompt template with `{{title}}`, `{{category}}`, `{{subcategory}}`, `{{period}}`, `{{references}}`, `{{webSources}}`, `{{instructions}}` placeholders. Version history (up to 10 versions) with rollback. Per-section prompt overrides that take precedence over the universal template.
+- **Executive Summary**: AI-generated 4–6 bullet summary across all approved sections, regeneratable from the Report Settings page. Displayed at the top of the Report View.
+- **AI model**: `openai/gpt-4o-mini` via OpenRouter. Draft generation: 800 tokens, temp 0.7. Executive summary: 600 tokens, temp 0.4.
+
+#### Admin Suite (`/admin`)
+- **Category Structure** (`/admin/structure`): Full L0 → L1 → L2 hierarchy editor. Add, rename, reorder (↑/↓), delete categories and subcategories at all levels. Renames cascade immediately to all section records (category string and subcategory string both update). Section counts shown per category.
+- **Section Management** (`/admin/sections`): Create new sections (title, category/subcategory from tree, SME assignment). Delete sections. Full section list with status badges.
+- **SME Management** (`/admin/team`): Add/remove SMEs from the pool. Workload view (sections per SME by status).
+- **Report Settings** (`/admin/settings`): Edit report title and period. Regenerate the AI executive summary. Display of current summary with timestamp.
+- **Workflow Oversight** (`/admin/workflow`): Override any section's status directly. Bulk-reset sections to Pending. List of sections currently awaiting action (in_review / revision_needed).
+- **Prompt Management** (`/admin/prompts`): Edit universal prompt (system + user template). Save as new version with optional change note. Version history table with Restore. Per-section overrides: add/edit/clear via modal. Override table shows which sections have custom prompts.
+
+#### Data Layer
+- All state lives in `DataContext` (React Context, in-memory). Resets on page refresh — by design for the prototype phase.
+- Seed data: 13 sections across 3 categories (Macroeconomic Topics, Supply Chain Risks, Product Categories), with realistic draft content for approved/in-progress sections.
+- Category tree: 3 L0 nodes, subcategories with L1 and L2 levels (e.g. Product Categories → SEMICONDUCTORS → Analog/Discrete/Logic/High-End).
+
+#### Environment Variables Required
+```
+OPENROUTER_API_KEY=     # Required for AI draft generation and executive summary
+TAVILY_API_KEY=         # Required for web search and URL extraction (optional — web search gracefully disabled if absent)
+```
+
+---
+
+### Next Priorities (Remaining Phase 1 / Pre-Phase 2)
+
+These are improvements that remain within the prototype scope (no database or auth required):
+
+1. **Real-content trial**: Project owner replaces seed data with actual GPSC report sections and tests the full draft → review → approve cycle with real intelligence inputs. This is the primary validation gate before Phase 2.
+2. **PDF export**: ⚠️ DEFERRED — see "PDF Export: Lessons Learned" section below before attempting again.
+3. **Section notes workflow**: The Notes tab exists but reviewer feedback/notes are not currently visible on the dashboard card. Consider surfacing the latest note on the "Revision Needed" card so the SME sees the feedback without opening the section.
+4. **Keyboard shortcuts / UX polish**: The rename flow in admin/structure requires two clicks (click name → confirm). Minor friction but worth smoothing before wider team use.
+
+### Phase 2 Priorities (After Core Validation)
+
+These require the project owner to confirm the core workflow is valuable before building:
+
+1. **Data persistence (Supabase)**: Migrate all state from in-memory context to a PostgreSQL database. Sections, category tree, SME list, report metadata, prompt config, and source preferences all need tables. State currently resets on refresh — this is the single biggest limitation for real team use.
+2. **Authentication (Supabase Auth or BetterAuth)**: Add user accounts. Tie SME assignment and section editing to logged-in users. Sections should only be editable by their assigned SME (or admin).
+3. **Source preferences persistence**: Migrate `localStorage` whitelist/blacklist to `user_source_prefs` table in Supabase. Schema is already designed — see Phase 2: Source Management section below.
+4. **Generation logs**: Wire up the `generation_logs` table. The `// TODO Phase 2` comment is already in `src/app/api/generate-draft/route.ts` at line 138–139.
+5. **Admin: Sources management page** (`/admin/sources`): App-wide domain whitelist/blacklist that overrides user preferences. Requires admin role.
+6. **Role-based access control**: `sme` / `editor` / `admin` roles. Editors approve sections; SMEs can only edit their own; admins manage structure and prompts.
 
 ### Phase 2: Source Management (when auth + database are enabled)
 
@@ -544,6 +590,44 @@ Add a `role` column to the Supabase `profiles` table (`'sme' | 'editor' | 'admin
 
 ---
 
+---
+
+## PDF Export: Lessons Learned
+
+**Status**: Attempted 2026-03-20, reverted. Do not retry without reading this section.
+
+### What was tried
+CSS `@media print` + `window.print()` approach — no new dependencies, aimed to auto-sync with web content changes by styling the existing React tree for print.
+
+### What went wrong
+
+**1. Web view breakage**
+Adding global `.print-only { display: none }` and associated helper classes to `globals.css` visibly corrupted the web UI header/layout even outside of print mode. Global CSS side-effects are hard to isolate in a Tailwind v4 project. Any future approach must be completely invisible to the normal web view.
+
+**2. Print output was not usable**
+- The browser's print engine sliced section content mid-card in unexpected ways despite `break-inside: avoid` — Recharts SVG charts break differently than text, and the combination of images + charts + long text inside a single card exceeded what the browser could honour cleanly.
+- The dark-to-light color override using `[class*="bg-zinc-9"]` attribute selectors was too broad and produced inconsistent results — some elements went white correctly, others were partially overridden.
+- The cover page + category page-break logic did not behave consistently across Chrome's print renderer.
+
+### Requirements for the next attempt
+
+Before building PDF export again, the following must be clear:
+
+1. **Approach must not touch `globals.css` or any shared stylesheet.** Any print CSS must be scoped strictly to the report route (e.g. via a CSS Module imported only in `report/page.tsx`, or a `<style>` tag injected only when printing).
+
+2. **The CSS `@media print` approach is not recommended for this app.** The combination of dark theme, Recharts SVGs, and complex card layouts makes reliable browser-native print output very difficult. Consider instead:
+   - **`@react-pdf/renderer`**: Build a completely separate, purpose-built PDF template component. Fully decoupled from the web UI — no dark-theme interference. Requires maintaining a parallel document structure but gives precise control over layout, page breaks, and fonts.
+   - **Server-side Puppeteer/Playwright**: A server route that spins up a headless browser, loads a light-mode-only `/report/print` route, and captures it as PDF. Zero CSS fighting; output matches the rendered page exactly.
+   - **"Copy to clipboard" as interim**: A much simpler win — copy the full report as formatted plain text or Markdown to the clipboard, letting the user paste into Word/Google Docs for their own formatting.
+
+3. **Before implementing, show the project owner a mockup or sample PDF output** and confirm the desired format (portrait vs landscape, whether charts should appear, level of formatting detail) before writing any code.
+
+4. **Test in the browser's print preview before considering it done.** The previous attempt was not visually verified in print preview before delivery — this must be a required step.
+
+---
+
 ## Version History
 - **Version 1.0** (2024): Initial CLAUDE.md structure
 - **Version 1.1** (2026-02): GPSC Market Intelligence project initialized — business objectives, report structure, and prototype phase defined
+- **Version 1.2** (2026-03-19): Phase 1 prototype complete — full capability summary added, next priorities updated to reflect real-world validation gate and Phase 2 roadmap
+- **Version 1.3** (2026-03-20): PDF export attempted and reverted; lessons learned documented; Next Priorities updated

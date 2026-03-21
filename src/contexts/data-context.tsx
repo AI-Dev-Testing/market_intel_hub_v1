@@ -4,9 +4,11 @@ import { createContext, useContext, useState, useRef, useEffect, useCallback, Re
 import {
   CategoryNode,
   DataContextValue,
+  FreightTrendData,
   PromptConfig,
   ReportMeta,
   ReportSection,
+  RiskScorecardData,
   SectionPromptOverride,
   SubcategoryNode,
 } from "@/types";
@@ -16,6 +18,8 @@ import {
   INITIAL_SME_LIST,
   INITIAL_REPORT_META,
   INITIAL_PROMPT_CONFIG,
+  INITIAL_SCORECARDS,
+  INITIAL_FREIGHT_TRENDS,
 } from "@/lib/data/sections";
 
 const DataContext = createContext<DataContextValue | null>(null);
@@ -98,6 +102,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [reportMeta, setReportMeta] = useState<ReportMeta>(INITIAL_REPORT_META);
   const [promptConfig, setPromptConfig] = useState<PromptConfig>(INITIAL_PROMPT_CONFIG);
   const [isSummaryLoading, setIsSummaryLoading] = useState(false);
+  const [scorecards, setScorecards] = useState<Record<string, RiskScorecardData>>(INITIAL_SCORECARDS);
+  const [freightTrends, setFreightTrends] = useState<Record<string, FreightTrendData>>(INITIAL_FREIGHT_TRENDS);
 
   // Refs used by the auto-trigger effect to avoid stale closures and dependency loops
   const publishedRef = useRef(INITIAL_REPORT_META.published);
@@ -330,6 +336,18 @@ export function DataProvider({ children }: { children: ReactNode }) {
     );
   };
 
+  // ---- risk scorecards ----
+
+  const updateScorecard = (sectionId: string, data: RiskScorecardData) => {
+    setScorecards((prev) => ({ ...prev, [sectionId]: data }));
+  };
+
+  // ---- freight trend indicators ----
+
+  const updateFreightTrend = (sectionId: string, data: FreightTrendData) => {
+    setFreightTrends((prev) => ({ ...prev, [sectionId]: data }));
+  };
+
   const clearSectionPromptOverride = (sectionId: string) => {
     setSections((prev) =>
       prev.map((s) => {
@@ -369,6 +387,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
         rollbackUniversalPrompt,
         setSectionPromptOverride,
         clearSectionPromptOverride,
+        scorecards,
+        updateScorecard,
+        freightTrends,
+        updateFreightTrend,
       }}
     >
       {children}

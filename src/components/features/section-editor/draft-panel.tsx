@@ -5,7 +5,7 @@ import { useState, KeyboardEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { ReportSection, Source } from "@/types";
+import { ReportSection, SectionStatus, Source } from "@/types";
 import { useSourcePreferences } from "@/hooks/use-source-preferences";
 import { useData } from "@/contexts/data-context";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,7 @@ interface DraftPanelProps {
   section: ReportSection;
   onDraftChange: (draft: string) => void;
   onSourcesChange?: (sources: Source[]) => void;
+  onStatusChange?: (status: SectionStatus) => void;
 }
 
 interface Reference {
@@ -22,7 +23,8 @@ interface Reference {
   content: string;
 }
 
-export function DraftPanel({ section, onDraftChange, onSourcesChange }: DraftPanelProps) {
+export function DraftPanel({ section, onDraftChange, onSourcesChange, onStatusChange }: DraftPanelProps) {
+  const isApproved = section.status === 'approved';
   const [draft, setDraft] = useState(section.draft);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +41,7 @@ export function DraftPanel({ section, onDraftChange, onSourcesChange }: DraftPan
   const [sources, setSources] = useState<Source[]>([]);
   const [showBlacklist, setShowBlacklist] = useState(false);
 
-  const { promptConfig } = useData();
+  const { promptConfig, scorecards } = useData();
   const { whitelist, blacklist, addToWhitelist, addToBlacklist, removePreference, getDomainStatus } = useSourcePreferences();
 
   // Resolve effective prompt: section override → universal
@@ -51,6 +53,9 @@ export function DraftPanel({ section, onDraftChange, onSourcesChange }: DraftPan
   const handleDraftChange = (value: string) => {
     setDraft(value);
     setHasUnsavedChanges(true);
+    if (section.status === 'pending' && value.trim()) {
+      onStatusChange?.('draft');
+    }
   };
 
   const handleSave = () => {
@@ -117,6 +122,12 @@ export function DraftPanel({ section, onDraftChange, onSourcesChange }: DraftPan
           blacklist,
           systemPrompt: effectiveSystemPrompt || undefined,
           userPromptTemplate: effectiveUserPromptTemplate || undefined,
+          // For sc-overview: pass current scorecard scores so AI draft reflects live data
+          ...(section.id === "sc-overview" && {
+            scorecardSummary: Object.entries(scorecards)
+              .map(([id, s]) => `${id}: overall ${s.overallScore}/10 (likelihood ${s.likelihood.score}/5, impact ${s.impact.score}/5, velocity ${s.velocity.score}/5)`)
+              .join("; "),
+          }),
         }),
       });
       const data = await response.json();
@@ -132,6 +143,9 @@ export function DraftPanel({ section, onDraftChange, onSourcesChange }: DraftPan
       setDraft(data.draft);
       onDraftChange(data.draft);
       setHasUnsavedChanges(false);
+      if (section.status === 'pending' && data.draft?.trim()) {
+        onStatusChange?.('draft');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
@@ -149,23 +163,25 @@ export function DraftPanel({ section, onDraftChange, onSourcesChange }: DraftPan
               Save Changes
             </Button>
           )}
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleGenerate}
-            disabled={isGenerating}
-          >
-            {isGenerating
-              ? "Generating..."
-              : draft
-              ? "Regenerate with AI"
-              : "Generate with AI"}
-          </Button>
+          {!isApproved && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleGenerate}
+              disabled={isGenerating}
+            >
+              {isGenerating
+                ? "Generating..."
+                : draft
+                ? "Regenerate with AI"
+                : "Generate with AI"}
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* AI Options Panel */}
-      <div className="border border-zinc-800 rounded-lg overflow-hidden">
+      {/* AI Options Panel — hidden for approved sections */}
+      {!isApproved && <div className="border border-zinc-800 rounded-lg overflow-hidden">
         <button
           onClick={() => setShowOptions((v) => !v)}
           className="w-full flex items-center justify-between px-4 py-2.5 text-xs text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40 transition-colors"
@@ -322,7 +338,7 @@ export function DraftPanel({ section, onDraftChange, onSourcesChange }: DraftPan
             </div>
           </div>
         )}
-      </div>
+      </div>}
 
       {/* Errors and warnings */}
       {error && (
@@ -395,8 +411,12 @@ export function DraftPanel({ section, onDraftChange, onSourcesChange }: DraftPan
       <Textarea
         value={draft}
         onChange={(e) => handleDraftChange(e.target.value)}
+        readOnly={isApproved}
         placeholder="Draft content will appear here. Click 'Generate with AI' to create an initial draft, or type directly."
-        className="min-h-64 bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 text-sm leading-relaxed resize-y"
+        className={cn(
+          "min-h-64 bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 text-sm leading-relaxed resize-y",
+          isApproved && "opacity-75 cursor-default"
+        )}
       />
       <p className="text-xs text-zinc-600">
         {draft.length} characters · Last updated: {section.lastUpdated}

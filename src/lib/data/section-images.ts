@@ -3,7 +3,15 @@
 // To update an image, replace the photo ID (the long number after /photo-).
 
 export const SECTION_IMAGES: Record<string, string> = {
-  // Macroeconomic Topics
+  // Macroeconomic Outlook
+  "macro-overview":
+    "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=800&q=60",
+  // Financial data / market overview dashboard
+
+  "macro-pmi":
+    "https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?auto=format&fit=crop&w=800&q=60",
+  // Factory / industrial production floor
+
   "macro-gdp":
     "https://images.unsplash.com/photo-1486325212027-8081e485255e?auto=format&fit=crop&w=800&q=60",
   // Financial district skyline
@@ -20,18 +28,30 @@ export const SECTION_IMAGES: Record<string, string> = {
     "https://images.unsplash.com/photo-1554469384-e58fac16e23a?auto=format&fit=crop&w=800&q=60",
   // Federal Reserve / central bank building
 
+  "macro-energy":
+    "https://images.unsplash.com/photo-1466611653911-95081537e5b7?auto=format&fit=crop&w=800&q=60",
+  // Oil refinery / energy infrastructure
+
   // Supply Chain Risks
-  "sc-geopolitical":
+  "sc-overview":
     "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=800&q=60",
-  // Globe / geopolitical view from space
+  // Globe / world map from space
+
+  "sc-compliance":
+    "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=800&q=60",
+  // Documents / audit / compliance desk
+
+  "sc-climate":
+    "https://images.unsplash.com/photo-1504608524841-42584120d693?auto=format&fit=crop&w=800&q=60",
+  // Storm / weather / climate hazard
 
   "sc-logistics":
     "https://images.unsplash.com/photo-1543576502-bc33e3b3edf9?auto=format&fit=crop&w=800&q=60",
   // Container port / cargo shipping
 
-  "sc-supplier":
-    "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=800&q=60",
-  // Factory / manufacturing floor
+  "sc-geopolitical":
+    "https://images.unsplash.com/photo-1488229297570-58520851e868?auto=format&fit=crop&w=800&q=60",
+  // Trade / flags / international
 
   // Product Categories — Semiconductors
   "semi-analog":
@@ -58,4 +78,21 @@ export const SECTION_IMAGES: Record<string, string> = {
   "em-connectors":
     "https://images.unsplash.com/photo-1612198188060-c7c2a3b66eae?auto=format&fit=crop&w=800&q=60",
   // Cables / connectors / wiring
+
+  // Transport & Logistics
+  "tl-overview":
+    "https://images.unsplash.com/photo-1494412574643-ff11b0a5c1c3?auto=format&fit=crop&w=800&q=60",
+  // Container ship aerial view / global shipping
+
+  "tl-ocean-rates":
+    "https://images.unsplash.com/photo-1494412574643-ff11b0a5c1c3?auto=format&fit=crop&w=800&q=60",
+  // Container ship at sea
+
+  "tl-air-rates":
+    "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=800&q=60",
+  // Cargo aircraft in flight
+
+  "tl-trade-lanes":
+    "https://images.unsplash.com/photo-1518467166778-b88f373ffec7?auto=format&fit=crop&w=800&q=60",
+  // World shipping / port aerial view
 };

@@ -48,7 +48,7 @@ async function fetchUrl(url: string): Promise<{ content?: string; error?: string
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { sectionTitle, category, subcategory, references, instructions, useWebSearch, systemPrompt, userPromptTemplate } = body;
+    const { sectionTitle, category, subcategory, references, instructions, useWebSearch, systemPrompt, userPromptTemplate, scorecardSummary } = body;
 
     if (!sectionTitle || !category || !subcategory) {
       return NextResponse.json(
@@ -147,12 +147,17 @@ export async function POST(request: NextRequest) {
       useWebSearch: Boolean(useWebSearch),
     });
 
+    // Augment instructions with live scorecard data when available (sc-overview)
+    const effectiveInstructions = scorecardSummary
+      ? `Current risk scores (use these exact figures in your draft): ${scorecardSummary}${instructions ? `\n\n${instructions}` : ""}`
+      : (instructions ?? "");
+
     const draft = await generateDraft({
       sectionTitle,
       category,
       subcategory,
       references: resolvedReferences,
-      instructions: instructions ?? "",
+      instructions: effectiveInstructions,
       webSources,
       ...(systemPrompt ? { systemPrompt } : {}),
       ...(userPromptTemplate ? { userPromptTemplate } : {}),

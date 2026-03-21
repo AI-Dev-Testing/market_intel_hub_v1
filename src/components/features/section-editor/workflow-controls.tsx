@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 interface WorkflowControlsProps {
   section: ReportSection;
   onStatusChange: (newStatus: SectionStatus) => void;
+  reviewerNotes: string;
 }
 
 const PIPELINE: SectionStatus[] = ["pending", "draft", "in_review", "approved"];
@@ -26,7 +27,7 @@ const PIPELINE_LABELS: Record<SectionStatus, string> = {
   revision_needed: "Revision",
 };
 
-export function WorkflowControls({ section, onStatusChange }: WorkflowControlsProps) {
+export function WorkflowControls({ section, onStatusChange, reviewerNotes }: WorkflowControlsProps) {
   const nextStatuses = STATUS_TRANSITIONS[section.status];
   const currentIdx = PIPELINE.indexOf(section.status);
   const isRevision = section.status === "revision_needed";
@@ -44,8 +45,8 @@ export function WorkflowControls({ section, onStatusChange }: WorkflowControlsPr
       {/* Pipeline Stepper */}
       <div className="flex items-center mb-4">
         {PIPELINE.map((stage, idx) => {
-          const isPast = !isRevision && currentIdx > idx;
-          const isCurrent = stage === section.status && !isRevision;
+          const isPast = !isRevision && (currentIdx > idx || (section.status === "approved" && stage === "approved"));
+          const isCurrent = stage === section.status && !isRevision && section.status !== "approved";
 
           return (
             <div key={stage} className="flex items-center flex-1 last:flex-none">
@@ -106,16 +107,22 @@ export function WorkflowControls({ section, onStatusChange }: WorkflowControlsPr
         <div className="flex flex-col gap-2">
           {nextStatuses.map((nextStatus) => {
             const label = STATUS_TRANSITION_LABELS[`${section.status}→${nextStatus}`] || STATUS_LABELS[nextStatus];
+            const isRevisionGated = nextStatus === "revision_needed" && !reviewerNotes.trim();
             return (
-              <Button
-                key={nextStatus}
-                variant={getButtonVariant(nextStatus)}
-                size="sm"
-                className="w-full justify-center"
-                onClick={() => onStatusChange(nextStatus)}
-              >
-                {label}
-              </Button>
+              <div key={nextStatus} className="flex flex-col gap-1">
+                <Button
+                  variant={getButtonVariant(nextStatus)}
+                  size="sm"
+                  className="w-full justify-center"
+                  disabled={isRevisionGated}
+                  onClick={() => onStatusChange(nextStatus)}
+                >
+                  {label}
+                </Button>
+                {isRevisionGated && (
+                  <p className="text-xs text-zinc-500 text-center">Add reviewer feedback before requesting revision.</p>
+                )}
+              </div>
             );
           })}
         </div>

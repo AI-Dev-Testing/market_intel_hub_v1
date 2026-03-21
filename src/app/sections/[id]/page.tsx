@@ -6,6 +6,9 @@ import { useRouter } from "next/navigation";
 import { useData } from "@/contexts/data-context";
 import { DraftPanel } from "@/components/features/section-editor/draft-panel";
 import { WorkflowControls } from "@/components/features/section-editor/workflow-controls";
+import { RiskScoresPanel } from "@/components/features/section-editor/risk-scores-panel";
+import { FreightTrendPanel } from "@/components/features/section-editor/freight-trend-panel";
+import { SECTION_CHARTS } from "@/lib/data/chart-registry";
 import { SectionStatus, STATUS_COLORS, STATUS_LABELS, Source } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,9 +18,10 @@ import { useState } from "react";
 export default function SectionEditorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-  const { getSectionById, updateSection } = useData();
+  const { getSectionById, updateSection, scorecards } = useData();
   const section = getSectionById(id);
   const [notes, setNotes] = useState(section?.notes ?? "");
+  const ChartComponent = section ? SECTION_CHARTS[section.id] : undefined;
 
   if (!section) {
     return (
@@ -85,23 +89,59 @@ export default function SectionEditorPage({ params }: { params: Promise<{ id: st
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Main content: draft editor */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Section Brief — read-only guidance visible when pending/draft and notes has content */}
+          {(section.status === "pending" || section.status === "draft") && section.notes && (
+            <div className="border border-zinc-800 rounded-lg p-3 bg-zinc-900/50">
+              <p className="text-xs font-medium text-zinc-500 mb-1.5 uppercase tracking-wide">Section Brief</p>
+              <p className="text-sm text-zinc-400 whitespace-pre-wrap leading-relaxed">{section.notes}</p>
+            </div>
+          )}
+          {ChartComponent && (
+            <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
+              <p className="text-xs font-medium text-zinc-500 mb-3 uppercase tracking-wide">Market Data</p>
+              <ChartComponent />
+            </div>
+          )}
+          {section.category === "Transport & Logistics" && (
+            <FreightTrendPanel sectionId={id} />
+          )}
+          {scorecards[id] && <RiskScoresPanel sectionId={id} />}
           <DraftPanel
             section={section}
             onDraftChange={handleDraftChange}
             onSourcesChange={handleSourcesChange}
+            onStatusChange={handleStatusChange}
           />
 
-          {/* Notes */}
-          <div className="space-y-2">
-            <h3 className="text-sm font-medium text-zinc-300">Review Notes</h3>
-            <Textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              onBlur={handleNotesSave}
-              placeholder="Add notes for reviewers or revision requests..."
-              className="min-h-24 bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 text-sm resize-y"
-            />
-          </div>
+          {/* Reviewer Notes — hidden during pending and draft */}
+          {section.status !== "pending" && section.status !== "draft" && (
+            section.status === "revision_needed" ? (
+              <div className="border border-orange-800 rounded-lg p-3 bg-orange-950/30">
+                <p className="text-xs font-medium text-orange-400 mb-1.5">⚠ Reviewer Feedback</p>
+                <p className="text-sm text-orange-200/90 whitespace-pre-wrap leading-relaxed">
+                  {section.notes || "No specific feedback was provided."}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-zinc-300">Reviewer Notes</h3>
+                {section.status === "in_review" && !notes.trim() && (
+                  <p className="text-xs text-zinc-500">Required if requesting revision.</p>
+                )}
+                <Textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  onBlur={handleNotesSave}
+                  readOnly={section.status === "approved"}
+                  placeholder="Describe what needs to change before this section can be approved..."
+                  className={cn(
+                    "min-h-24 bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 text-sm resize-y",
+                    section.status === "approved" && "opacity-75 cursor-default"
+                  )}
+                />
+              </div>
+            )
+          )}
         </div>
 
         {/* Sidebar: workflow */}
@@ -109,6 +149,7 @@ export default function SectionEditorPage({ params }: { params: Promise<{ id: st
           <WorkflowControls
             section={section}
             onStatusChange={handleStatusChange}
+            reviewerNotes={notes}
           />
         </div>
       </div>

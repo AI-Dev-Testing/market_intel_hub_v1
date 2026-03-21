@@ -68,6 +68,39 @@ export interface PromptConfig {
   history: PromptVersion[]; // newest-first, max 10
 }
 
+// Risk scorecard types (Supply Chain Risk sections)
+export interface RiskDimension {
+  score: number; // 1-5
+  description: string;
+}
+
+export interface RiskRegion {
+  name: string;
+  score: number; // 1-5
+  description: string;
+}
+
+export interface RiskScorecardData {
+  overallScore: number; // 1-10
+  likelihood: RiskDimension;
+  impact: RiskDimension;
+  velocity: RiskDimension;
+  regions: [RiskRegion, RiskRegion, RiskRegion, RiskRegion];
+}
+
+// Freight trend indicators (Transport & Logistics sections)
+export interface FreightTrendDimension {
+  level: 1 | 2 | 3 | 4 | 5; // 1 = best for buyers, 5 = worst
+  note: string;              // 1–2 sentence context
+  headline?: string;         // short display value e.g. "$3,200/FEU", "62%"
+}
+
+export interface FreightTrendData {
+  rates: FreightTrendDimension;        // 1=Very Low … 5=Very High
+  capacity: FreightTrendDimension;     // 1=Surplus … 5=Tight
+  availability: FreightTrendDimension; // 1=Excellent … 5=Critical
+}
+
 export interface DataContextValue {
   // Existing
   sections: ReportSection[];
@@ -106,6 +139,14 @@ export interface DataContextValue {
   rollbackUniversalPrompt: (version: number) => void;
   setSectionPromptOverride: (sectionId: string, override: SectionPromptOverride) => void;
   clearSectionPromptOverride: (sectionId: string) => void;
+
+  // Risk scorecards
+  scorecards: Record<string, RiskScorecardData>;
+  updateScorecard: (sectionId: string, data: RiskScorecardData) => void;
+
+  // Freight trend indicators
+  freightTrends: Record<string, FreightTrendData>;
+  updateFreightTrend: (sectionId: string, data: FreightTrendData) => void;
 }
 
 export const STATUS_LABELS: Record<SectionStatus, string> = {
