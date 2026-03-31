@@ -1,9 +1,9 @@
 // src/app/report/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { AlertTriangle, ChevronDown, ChevronUp, Link2 } from "lucide-react";
+import { AlertTriangle, ArrowUp, ChevronDown, ChevronUp, Link2 } from "lucide-react";
 import { useData } from "@/contexts/data-context";
 import { SECTION_IMAGES } from "@/lib/data/section-images";
 import { SECTION_CHARTS } from "@/lib/data/chart-registry";
@@ -43,6 +43,36 @@ function SourcesDisclosure({ sources }: { sources: Source[] }) {
 function categorySlug(cat: string): string {
   const slug = cat.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   return slug || "category";
+}
+
+function formatShortDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function estimateReadTime(text: string): number {
+  return Math.max(1, Math.ceil(text.trim().split(/\s+/).length / 200));
+}
+
+function BackToTop() {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const handler = () => setVisible(window.scrollY > 300);
+    window.addEventListener("scroll", handler, { passive: true });
+    return () => window.removeEventListener("scroll", handler);
+  }, []);
+
+  if (!visible) return null;
+
+  return (
+    <button
+      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+      className="fixed bottom-6 right-6 z-50 rounded-full bg-zinc-800 border border-zinc-700 p-2.5 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 transition-colors shadow-lg"
+      aria-label="Back to top"
+    >
+      <ArrowUp className="w-4 h-4" />
+    </button>
+  );
 }
 
 export default function ReportPage() {
@@ -97,9 +127,14 @@ export default function ReportPage() {
       <div className="mb-8">
         <h1 className="text-xl font-semibold text-zinc-100">{reportMeta.title}</h1>
         <p className="text-sm text-zinc-400 mt-1">{reportMeta.period} — Internal Draft</p>
-        <div className="flex items-center gap-4 mt-3 text-xs text-zinc-500">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-3 text-xs text-zinc-500">
+          <span>Period: {reportMeta.period}</span>
+          <span className="text-zinc-700">·</span>
           <span>{approvedSections.length} of {totalSections} sections approved</span>
-          <span suppressHydrationWarning>Generated {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</span>
+          <span className="text-zinc-700">·</span>
+          <span suppressHydrationWarning>
+            Updated {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+          </span>
         </div>
         {approvedSections.length < totalSections && (
           <div className="mt-3 text-xs text-yellow-600 bg-yellow-950/30 border border-yellow-900/50 rounded-md px-3 py-2 flex items-center justify-between">
@@ -232,28 +267,35 @@ export default function ReportPage() {
                           <div className="h-10 bg-zinc-900" />
                         )}
                         <div className="p-5">
-                          <div className="group flex items-start gap-1.5 mb-3">
-                            <h3 className="text-sm font-semibold text-zinc-200 flex-1">
-                              {section.title}
-                            </h3>
-                            <a
-                              href={`#${section.id}`}
-                              onClick={async (e) => {
-                                e.preventDefault();
-                                const url = `${window.location.origin}/report#${section.id}`;
-                                try {
-                                  await navigator.clipboard.writeText(url);
-                                } catch {
-                                  // clipboard unavailable — URL still visible in address bar via replaceState
-                                }
-                                window.history.replaceState(null, "", `/report#${section.id}`);
-                              }}
-                              className="opacity-0 group-hover:opacity-100 transition-opacity mt-0.5 text-zinc-600 hover:text-zinc-400 flex-shrink-0"
-                              title="Copy link to section"
-                              aria-label="Copy link to section"
-                            >
-                              <Link2 className="w-3.5 h-3.5" />
-                            </a>
+                          <div className="mb-3">
+                            <div className="group flex items-start gap-1.5 mb-1">
+                              <h3 className="text-sm font-semibold text-zinc-200 flex-1">
+                                {section.title}
+                              </h3>
+                              <a
+                                href={`#${section.id}`}
+                                onClick={async (e) => {
+                                  e.preventDefault();
+                                  const url = `${window.location.origin}/report#${section.id}`;
+                                  try {
+                                    await navigator.clipboard.writeText(url);
+                                  } catch {
+                                    // clipboard unavailable — URL still visible in address bar via replaceState
+                                  }
+                                  window.history.replaceState(null, "", `/report#${section.id}`);
+                                }}
+                                className="opacity-0 group-hover:opacity-100 transition-opacity mt-0.5 text-zinc-600 hover:text-zinc-400 flex-shrink-0"
+                                title="Copy link to section"
+                                aria-label="Copy link to section"
+                              >
+                                <Link2 className="w-3.5 h-3.5" />
+                              </a>
+                            </div>
+                            <div className="flex items-center gap-3 text-xs text-zinc-600">
+                              <span>Updated {formatShortDate(section.lastUpdated)}</span>
+                              <span>·</span>
+                              <span>{estimateReadTime(section.draft)} min read</span>
+                            </div>
                           </div>
                           {ChartComponent && (
                             <div className="mb-4 -mx-5 px-5 pb-4 border-b border-zinc-800">
@@ -279,6 +321,7 @@ export default function ReportPage() {
           })}
         </div>
       )}
+        <BackToTop />
       </div>
     </div>
   );
