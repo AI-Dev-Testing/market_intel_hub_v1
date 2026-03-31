@@ -41,8 +41,14 @@ export function SectionCard({ section }: SectionCardProps) {
           </span>
         </div>
         <p className="text-xs text-zinc-500 mb-3">{section.subcategory}</p>
-        <div className="flex-1">
-          {section.draft ? (
+        <div className="flex-1 space-y-2">
+          {section.status === "revision_needed" && section.notes?.trim() ? (
+            <div className="bg-orange-950/40 border border-orange-900/40 rounded-md px-2.5 py-1.5">
+              <p className="text-xs text-orange-300/80 line-clamp-1 leading-relaxed">
+                ⚠ {section.notes}
+              </p>
+            </div>
+          ) : section.draft ? (
             <p className="text-xs text-zinc-400 line-clamp-2 leading-relaxed">
               {section.draft}
             </p>
