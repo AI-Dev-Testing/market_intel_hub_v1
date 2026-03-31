@@ -66,6 +66,7 @@ export async function POST(request: NextRequest) {
 
     const resolvedReferences: Reference[] = [];
     const urlWarnings: string[] = [];
+    const urlStatuses: Array<{ url: string; status: "fetched" | "fallback" | "failed" }> = [];
 
     if (Array.isArray(references)) {
       const urlRefs = references.filter((r: Reference) => r.type === "url").slice(0, MAX_URLS);
@@ -95,10 +96,12 @@ export async function POST(request: NextRequest) {
       for (const { ref, result } of directResults) {
         if (result.content) {
           resolvedReferences.push({ ...ref, fetchedContent: result.content });
+          urlStatuses.push({ url: ref.content, status: "fetched" });
         } else {
           const extracted = extractMap.get(ref.content);
           if (extracted?.content) {
             resolvedReferences.push({ ...ref, fetchedContent: extracted.content });
+            urlStatuses.push({ url: ref.content, status: "fallback" });
           } else {
             const reason = result.error ?? "Unknown error";
             let tip = "";
@@ -109,6 +112,7 @@ export async function POST(request: NextRequest) {
             }
             resolvedReferences.push({ ...ref, fetchError: reason });
             urlWarnings.push(`Could not fetch ${ref.content}: ${reason}${tip}`);
+            urlStatuses.push({ url: ref.content, status: "failed" });
           }
         }
       }
@@ -166,6 +170,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       draft,
       sources: webSources,
+      urlStatuses,
       ...(urlWarnings.length > 0 && { warnings: urlWarnings }),
     });
   } catch (error) {
