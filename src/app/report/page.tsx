@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronUp, Link2 } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronUp, Link2 } from "lucide-react";
 import { useData } from "@/contexts/data-context";
 import { SECTION_IMAGES } from "@/lib/data/section-images";
 import { SECTION_CHARTS } from "@/lib/data/chart-registry";
@@ -86,6 +86,14 @@ export default function ReportPage() {
     <div className="flex gap-10 items-start">
       <TocSidebar entries={tocEntries} />
       <div className="min-w-0 flex-1 max-w-[780px]">
+        {!reportMeta.published && (
+          <div className="mb-6 flex items-center gap-2.5 rounded-md bg-amber-950/40 border border-amber-800/50 px-4 py-3">
+            <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0" />
+            <p className="text-sm text-amber-300">
+              This report is in <strong className="font-semibold">draft</strong> — not ready for external sharing.
+            </p>
+          </div>
+        )}
       <div className="mb-8">
         <h1 className="text-xl font-semibold text-zinc-100">{reportMeta.title}</h1>
         <p className="text-sm text-zinc-400 mt-1">{reportMeta.period} — Internal Draft</p>
