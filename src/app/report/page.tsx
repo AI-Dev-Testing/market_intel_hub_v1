@@ -46,7 +46,9 @@ function categorySlug(cat: string): string {
 }
 
 function formatShortDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  // Append time to treat date-only strings as local midnight, not UTC midnight
+  const d = new Date(iso.includes("T") ? iso : `${iso}T00:00:00`);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 function estimateReadTime(text: string): number {
@@ -114,7 +116,7 @@ export default function ReportPage() {
     ? approvedByCategory.filter((g) => g.category === activeCategory)
     : approvedByCategory;
 
-  const tocEntries: TocEntry[] = approvedByCategory.map(({ category, sections: catSections }) => ({
+  const tocEntries: TocEntry[] = visibleCategories.map(({ category, sections: catSections }) => ({
     categoryId: categorySlug(category),
     categoryLabel: category,
     sections: catSections.map((s) => ({ id: s.id, title: s.title })),
@@ -319,8 +321,12 @@ export default function ReportPage() {
                             </div>
                             <div className="flex items-center gap-3 text-xs text-zinc-600">
                               <span>Updated {formatShortDate(section.lastUpdated)}</span>
-                              <span>·</span>
-                              <span>{estimateReadTime(section.draft)} min read</span>
+                              {section.draft.trim().length > 0 && (
+                                <>
+                                  <span>·</span>
+                                  <span>{estimateReadTime(section.draft)} min read</span>
+                                </>
+                              )}
                             </div>
                           </div>
                           {ChartComponent && (

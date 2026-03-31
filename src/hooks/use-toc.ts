@@ -1,7 +1,7 @@
 // src/hooks/use-toc.ts
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 /**
  * Tracks which section element is currently visible near the top of the
@@ -11,21 +11,28 @@ import { useState, useEffect } from "react";
  */
 export function useTOC(sectionIds: string[]): string | null {
   const [activeId, setActiveId] = useState<string | null>(null);
+  // Persist the set of currently intersecting elements across batches
+  const intersectingRef = useRef<Map<string, IntersectionObserverEntry>>(new Map());
 
   useEffect(() => {
     if (sectionIds.length === 0) return;
 
     const handleIntersect: IntersectionObserverCallback = (entries) => {
-      // Find the intersecting entry whose top edge is closest to viewport top
-      const intersecting = entries
-        .filter((e) => e.isIntersecting)
-        .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+      // Update the persistent intersecting map
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          intersectingRef.current.set(entry.target.id, entry);
+        } else {
+          intersectingRef.current.delete(entry.target.id);
+        }
+      });
 
-      if (intersecting.length > 0) {
-        setActiveId(intersecting[0].target.id);
-      } else {
-        setActiveId(null);
-      }
+      // Pick the intersecting entry whose top edge is closest to viewport top
+      const sorted = [...intersectingRef.current.values()].sort(
+        (a, b) => a.boundingClientRect.top - b.boundingClientRect.top
+      );
+
+      setActiveId(sorted.length > 0 ? sorted[0].target.id : null);
     };
 
     const observer = new IntersectionObserver(handleIntersect, {
@@ -39,7 +46,10 @@ export function useTOC(sectionIds: string[]): string | null {
       if (el) observer.observe(el);
     });
 
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      intersectingRef.current.clear();
+    };
   }, [sectionIds.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return activeId;
