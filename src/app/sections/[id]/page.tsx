@@ -1,7 +1,7 @@
 // src/app/sections/[id]/page.tsx
 "use client";
 
-import { use } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useData } from "@/contexts/data-context";
 import { DraftPanel } from "@/components/features/section-editor/draft-panel";
@@ -9,11 +9,10 @@ import { WorkflowControls } from "@/components/features/section-editor/workflow-
 import { RiskScoresPanel } from "@/components/features/section-editor/risk-scores-panel";
 import { FreightTrendPanel } from "@/components/features/section-editor/freight-trend-panel";
 import { SECTION_CHARTS } from "@/lib/data/chart-registry";
-import { SectionStatus, STATUS_COLORS, STATUS_LABELS, Source } from "@/types";
+import { SectionStatus, STATUS_COLORS, STATUS_LABELS, StatusLogEntry, Source } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
 
 export default function SectionEditorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -22,6 +21,16 @@ export default function SectionEditorPage({ params }: { params: Promise<{ id: st
   const section = getSectionById(id);
   const [notes, setNotes] = useState(section?.notes ?? "");
   const ChartComponent = section ? SECTION_CHARTS[section.id] : undefined;
+
+  const notesRef = useRef<HTMLTextAreaElement>(null);
+  const feedbackRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to reviewer feedback panel when section loads in revision_needed state
+  useEffect(() => {
+    if (section?.status === "revision_needed" && feedbackRef.current) {
+      feedbackRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [section?.id]); // Only on initial load / section change
 
   if (!section) {
     return (
@@ -48,6 +57,11 @@ export default function SectionEditorPage({ params }: { params: Promise<{ id: st
 
   const handleNotesSave = () => {
     updateSection(id, { notes });
+  };
+
+  const handleRevisionGateHit = () => {
+    notesRef.current?.focus();
+    notesRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
   return (
@@ -116,19 +130,24 @@ export default function SectionEditorPage({ params }: { params: Promise<{ id: st
           {/* Reviewer Notes — hidden during pending and draft */}
           {section.status !== "pending" && section.status !== "draft" && (
             section.status === "revision_needed" ? (
-              <div className="border border-orange-800 rounded-lg p-3 bg-orange-950/30">
-                <p className="text-xs font-medium text-orange-400 mb-1.5">⚠ Reviewer Feedback</p>
+              <div ref={feedbackRef} className="border border-orange-800 rounded-lg p-3 bg-orange-950/30">
+                <p className="text-xs font-medium text-orange-400 mb-1.5">&#9888; Reviewer Feedback</p>
                 <p className="text-sm text-orange-200/90 whitespace-pre-wrap leading-relaxed">
                   {section.notes || "No specific feedback was provided."}
                 </p>
               </div>
             ) : (
               <div className="space-y-2">
-                <h3 className="text-sm font-medium text-zinc-300">Reviewer Notes</h3>
+                <h3 className="text-sm font-medium text-zinc-300">
+                  {section.status === "in_review"
+                    ? `Feedback for ${section.assignedSme || "SME"} — describe what needs to change`
+                    : "Reviewer Notes"}
+                </h3>
                 {section.status === "in_review" && !notes.trim() && (
-                  <p className="text-xs text-zinc-500">Required if requesting revision.</p>
+                  <p className="text-xs text-zinc-500">Required if requesting revision — click &quot;Request Revision&quot; to be prompted.</p>
                 )}
                 <Textarea
+                  ref={notesRef}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   onBlur={handleNotesSave}
@@ -150,7 +169,34 @@ export default function SectionEditorPage({ params }: { params: Promise<{ id: st
             section={section}
             onStatusChange={handleStatusChange}
             reviewerNotes={notes}
+            onRevisionGateHit={handleRevisionGateHit}
           />
+
+          {/* Status change log */}
+          {section.statusHistory && section.statusHistory.length > 0 && (
+            <div className="border border-zinc-800 rounded-lg p-4 bg-zinc-900">
+              <h3 className="text-xs font-medium text-zinc-400 mb-3 uppercase tracking-wide">History</h3>
+              <ol className="space-y-2">
+                {[...section.statusHistory].reverse().map((entry: StatusLogEntry, idx: number) => (
+                  <li key={idx} className="flex items-start gap-2 text-xs">
+                    <span className="text-zinc-600 mt-0.5 flex-shrink-0">{entry.timestamp}</span>
+                    <span className={cn(
+                      "px-1.5 py-0.5 rounded-full flex-shrink-0",
+                      entry.status === "approved" ? "bg-green-900/50 text-green-300" :
+                      entry.status === "revision_needed" ? "bg-orange-900/50 text-orange-300" :
+                      entry.status === "in_review" ? "bg-yellow-900/50 text-yellow-300" :
+                      "bg-zinc-800 text-zinc-400"
+                    )}>
+                      {STATUS_LABELS[entry.status]}
+                    </span>
+                    {entry.note && (
+                      <span className="text-zinc-500 line-clamp-1">{entry.note}</span>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
         </div>
       </div>
     </div>
