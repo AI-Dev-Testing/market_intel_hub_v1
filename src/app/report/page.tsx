@@ -8,6 +8,7 @@ import { useData } from "@/contexts/data-context";
 import { SECTION_IMAGES } from "@/lib/data/section-images";
 import { SECTION_CHARTS } from "@/lib/data/chart-registry";
 import { Source } from "@/types";
+import { TocSidebar, type TocEntry } from "@/components/features/report/toc-sidebar";
 
 function SourcesDisclosure({ sources }: { sources: Source[] }) {
   const [open, setOpen] = useState(false);
@@ -65,6 +66,12 @@ export default function ReportPage() {
     ? approvedByCategory.filter((g) => g.category === activeCategory)
     : approvedByCategory;
 
+  const tocEntries: TocEntry[] = approvedByCategory.map(({ category, sections: catSections }) => ({
+    categoryId: categorySlug(category),
+    categoryLabel: category,
+    sections: catSections.map((s) => ({ id: s.id, title: s.title })),
+  }));
+
   const toggleCategory = (cat: string) =>
     setActiveCategory((prev) => (prev === cat ? null : cat));
 
@@ -76,7 +83,9 @@ export default function ReportPage() {
     });
 
   return (
-    <div className="max-w-3xl">
+    <div className="flex gap-10 items-start">
+      <TocSidebar entries={tocEntries} />
+      <div className="min-w-0 flex-1 max-w-[780px]">
       <div className="mb-8">
         <h1 className="text-xl font-semibold text-zinc-100">{reportMeta.title}</h1>
         <p className="text-sm text-zinc-400 mt-1">{reportMeta.period} — Internal Draft</p>
@@ -262,6 +271,7 @@ export default function ReportPage() {
           })}
         </div>
       )}
+      </div>
     </div>
   );
 }
