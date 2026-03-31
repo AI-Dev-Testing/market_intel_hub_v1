@@ -15,6 +15,7 @@ interface WorkflowControlsProps {
   section: ReportSection;
   onStatusChange: (newStatus: SectionStatus) => void;
   reviewerNotes: string;
+  onRevisionGateHit?: () => void;
 }
 
 const PIPELINE: SectionStatus[] = ["pending", "draft", "in_review", "approved"];
@@ -27,7 +28,7 @@ const PIPELINE_LABELS: Record<SectionStatus, string> = {
   revision_needed: "Revision",
 };
 
-export function WorkflowControls({ section, onStatusChange, reviewerNotes }: WorkflowControlsProps) {
+export function WorkflowControls({ section, onStatusChange, reviewerNotes, onRevisionGateHit }: WorkflowControlsProps) {
   const nextStatuses = STATUS_TRANSITIONS[section.status];
   const currentIdx = PIPELINE.indexOf(section.status);
   const isRevision = section.status === "revision_needed";
@@ -109,19 +110,21 @@ export function WorkflowControls({ section, onStatusChange, reviewerNotes }: Wor
             const label = STATUS_TRANSITION_LABELS[`${section.status}→${nextStatus}`] || STATUS_LABELS[nextStatus];
             const isRevisionGated = nextStatus === "revision_needed" && !reviewerNotes.trim();
             return (
-              <div key={nextStatus} className="flex flex-col gap-1">
+              <div key={nextStatus}>
                 <Button
                   variant={getButtonVariant(nextStatus)}
                   size="sm"
                   className="w-full justify-center"
-                  disabled={isRevisionGated}
-                  onClick={() => onStatusChange(nextStatus)}
+                  onClick={() => {
+                    if (isRevisionGated) {
+                      onRevisionGateHit?.();
+                    } else {
+                      onStatusChange(nextStatus);
+                    }
+                  }}
                 >
                   {label}
                 </Button>
-                {isRevisionGated && (
-                  <p className="text-xs text-zinc-500 text-center">Add reviewer feedback before requesting revision.</p>
-                )}
               </div>
             );
           })}
