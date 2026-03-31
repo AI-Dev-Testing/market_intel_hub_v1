@@ -1,12 +1,13 @@
 // src/components/features/section-editor/draft-panel.tsx
 "use client";
 
-import { useState, KeyboardEvent } from "react";
+import { useState, KeyboardEvent, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { ReportSection, SectionStatus, Source } from "@/types";
 import { useSourcePreferences } from "@/hooks/use-source-preferences";
+import { useAutosave } from "@/hooks/use-autosave";
 import { useData } from "@/contexts/data-context";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +23,8 @@ interface Reference {
   type: "url" | "text";
   content: string;
 }
+
+type UrlFetchStatus = "fetched" | "fallback" | "failed";
 
 export function DraftPanel({ section, onDraftChange, onSourcesChange, onStatusChange }: DraftPanelProps) {
   const isApproved = section.status === 'approved';
@@ -40,6 +43,34 @@ export function DraftPanel({ section, onDraftChange, onSourcesChange, onStatusCh
   const [instructions, setInstructions] = useState("");
   const [sources, setSources] = useState<Source[]>([]);
   const [showBlacklist, setShowBlacklist] = useState(false);
+  const [urlStatuses, setUrlStatuses] = useState<Record<string, UrlFetchStatus>>({});
+  const [generationStatus, setGenerationStatus] = useState<string | null>(null);
+  const [showRestoreBanner, setShowRestoreBanner] = useState(false);
+  const hasRestoredRef = useRef(false);
+
+  const { getAutosaved, clearAutosave } = useAutosave(section.id, draft, hasUnsavedChanges);
+
+  // Check for autosaved draft on mount
+  useEffect(() => {
+    if (hasRestoredRef.current || isApproved) return;
+    hasRestoredRef.current = true;
+    const saved = getAutosaved();
+    if (saved && saved.draft !== section.draft) {
+      setShowRestoreBanner(true);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Warn on unsaved changes before navigating away
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [hasUnsavedChanges]);
 
   const { promptConfig, scorecards } = useData();
   const { whitelist, blacklist, addToWhitelist, addToBlacklist, removePreference, getDomainStatus } = useSourcePreferences();
@@ -61,6 +92,7 @@ export function DraftPanel({ section, onDraftChange, onSourcesChange, onStatusCh
   const handleSave = () => {
     onDraftChange(draft);
     setHasUnsavedChanges(false);
+    clearAutosave();
   };
 
   const extractDomain = (url: string): string => {
@@ -106,9 +138,24 @@ export function DraftPanel({ section, onDraftChange, onSourcesChange, onStatusCh
     setIsGenerating(true);
     setError(null);
     setWarnings([]);
+    setUrlStatuses({});
+
+    const references = buildReferences();
+    const urlCount = urls.length;
+    const webSearchOn = useWebSearch;
+    setGenerationStatus(
+      [
+        urlCount > 0 && `Fetching ${urlCount} source${urlCount !== 1 ? "s" : ""}…`,
+        webSearchOn && "Searching the web…",
+      ]
+        .filter(Boolean)
+        .join(" ") || "Generating draft…"
+    );
+
     try {
-      const references = buildReferences();
-      const response = await fetch("/api/generate-draft", {
+      // window.fetch — browser client component
+      const apiFetch = window.fetch.bind(window);
+      const response = await apiFetch("/api/generate-draft", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -122,7 +169,6 @@ export function DraftPanel({ section, onDraftChange, onSourcesChange, onStatusCh
           blacklist,
           systemPrompt: effectiveSystemPrompt || undefined,
           userPromptTemplate: effectiveUserPromptTemplate || undefined,
-          // For sc-overview: pass current scorecard scores so AI draft reflects live data
           ...(section.id === "sc-overview" && {
             scorecardSummary: Object.entries(scorecards)
               .map(([id, s]) => `${id}: overall ${s.overallScore}/10 (likelihood ${s.likelihood.score}/5, impact ${s.impact.score}/5, velocity ${s.velocity.score}/5)`)
@@ -134,27 +180,77 @@ export function DraftPanel({ section, onDraftChange, onSourcesChange, onStatusCh
       if (!response.ok) {
         throw new Error(data.error || "Failed to generate draft");
       }
-      if (data.warnings?.length) {
-        setWarnings(data.warnings);
+
+      // Build urlStatuses map from API response
+      if (Array.isArray(data.urlStatuses)) {
+        const statusMap: Record<string, UrlFetchStatus> = {};
+        for (const entry of data.urlStatuses) {
+          statusMap[entry.url] = entry.status;
+        }
+        setUrlStatuses(statusMap);
+
+        const fetchedCount = data.urlStatuses.filter((e: { status: string }) => e.status === "fetched").length;
+        const fallbackCount = data.urlStatuses.filter((e: { status: string }) => e.status === "fallback").length;
+        const webCount = (data.sources ?? []).length;
+        const parts = [
+          (fetchedCount + fallbackCount) > 0 && `${fetchedCount + fallbackCount} source${(fetchedCount + fallbackCount) !== 1 ? "s" : ""} loaded`,
+          webCount > 0 && `${webCount} web result${webCount !== 1 ? "s" : ""} found`,
+        ].filter(Boolean);
+        setGenerationStatus(parts.length > 0 ? parts.join(", ") + ". Generating draft…" : "Generating draft…");
       }
+
+      if (data.warnings?.length) setWarnings(data.warnings);
       const newSources: Source[] = data.sources ?? [];
       setSources(newSources);
       onSourcesChange?.(newSources);
       setDraft(data.draft);
       onDraftChange(data.draft);
       setHasUnsavedChanges(false);
-      if (section.status === 'pending' && data.draft?.trim()) {
-        onStatusChange?.('draft');
+      clearAutosave();
+      if (section.status === "pending" && data.draft?.trim()) {
+        onStatusChange?.("draft");
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
       setIsGenerating(false);
+      setGenerationStatus(null);
     }
   };
 
   return (
     <div className="space-y-3">
+      {/* Autosave restore banner */}
+      {showRestoreBanner && (
+        <div className="flex items-center justify-between bg-zinc-800/60 border border-zinc-700 rounded-md px-3 py-2">
+          <p className="text-xs text-zinc-300">
+            A saved draft from {(() => {
+              const saved = getAutosaved();
+              if (!saved) return "earlier";
+              const diff = Math.round((Date.now() - new Date(saved.savedAt).getTime()) / 60000);
+              return diff < 60 ? `${diff} min ago` : new Date(saved.savedAt).toLocaleTimeString();
+            })()} was found.
+          </p>
+          <div className="flex gap-2 ml-3">
+            <button
+              onClick={() => {
+                const saved = getAutosaved();
+                if (saved) { setDraft(saved.draft); setHasUnsavedChanges(true); }
+                setShowRestoreBanner(false);
+              }}
+              className="text-xs text-blue-400 hover:text-blue-200"
+            >
+              Restore
+            </button>
+            <button
+              onClick={() => { clearAutosave(); setShowRestoreBanner(false); }}
+              className="text-xs text-zinc-500 hover:text-zinc-300"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-medium text-zinc-300">Draft Content</h2>
         <div className="flex items-center gap-2">
@@ -287,20 +383,47 @@ export function DraftPanel({ section, onDraftChange, onSourcesChange, onStatusCh
               </div>
               {urls.length > 0 && (
                 <div className="flex flex-wrap gap-2">
-                  {urls.map((url) => (
-                    <div
-                      key={url}
-                      className="flex items-center gap-1.5 bg-zinc-800 border border-zinc-700 rounded-md px-2 py-1 text-xs text-zinc-300 max-w-full"
-                    >
-                      <span className="truncate max-w-48">{url}</span>
-                      <button
-                        onClick={() => removeUrl(url)}
-                        className="text-zinc-500 hover:text-zinc-200 flex-shrink-0 ml-1"
+                  {urls.map((url) => {
+                    const fetchStatus = urlStatuses[url];
+                    return (
+                      <div
+                        key={url}
+                        className={cn(
+                          "flex items-center gap-1.5 rounded-md px-2 py-1 text-xs max-w-full border",
+                          fetchStatus === "fetched"
+                            ? "bg-green-950/30 border-green-800/50 text-green-300"
+                            : fetchStatus === "fallback"
+                            ? "bg-yellow-950/30 border-yellow-800/50 text-yellow-300"
+                            : fetchStatus === "failed"
+                            ? "bg-red-950/30 border-red-800/50 text-red-300"
+                            : "bg-zinc-800 border-zinc-700 text-zinc-300"
+                        )}
                       >
-                        ×
-                      </button>
-                    </div>
-                  ))}
+                        {fetchStatus === "fetched" && <span title="Fetched directly">✓</span>}
+                        {fetchStatus === "fallback" && <span title="Retrieved via extract fallback">⟳</span>}
+                        {fetchStatus === "failed" && <span title="Could not retrieve content">✗</span>}
+                        <span className="truncate max-w-48">{url}</span>
+                        {fetchStatus === "failed" && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setUrlStatuses((prev) => { const next = { ...prev }; delete next[url]; return next; });
+                            }}
+                            className="text-red-400 hover:text-red-200 ml-0.5 text-xs"
+                            title="Retry fetch"
+                          >
+                            ↺
+                          </button>
+                        )}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); removeUrl(url); }}
+                          className="text-zinc-500 hover:text-zinc-200 flex-shrink-0 ml-1"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -339,6 +462,13 @@ export function DraftPanel({ section, onDraftChange, onSourcesChange, onStatusCh
           </div>
         )}
       </div>}
+
+      {/* Generation status message */}
+      {generationStatus && (
+        <div className="text-xs text-zinc-400 bg-zinc-800/40 border border-zinc-700 rounded-md p-3">
+          {generationStatus}
+        </div>
+      )}
 
       {/* Errors and warnings */}
       {error && (
