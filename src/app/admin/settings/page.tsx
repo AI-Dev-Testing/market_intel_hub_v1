@@ -8,22 +8,32 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export default function AdminSettingsPage() {
-  const { reportMeta, updateReportMeta, isSummaryLoading, regenerateSummary } = useData();
+  const { sections, reportMeta, updateReportMeta, isSummaryLoading, isSummaryStale, regenerateSummary } = useData();
   const [title, setTitle] = useState(reportMeta.title);
   const [period, setPeriod] = useState(reportMeta.period);
   const [published, setPublished] = useState(reportMeta.published);
-  const [saved, setSaved] = useState(false);
+  const [showPublishConfirm, setShowPublishConfirm] = useState(false);
 
   const isDirty =
     title !== reportMeta.title ||
     period !== reportMeta.period ||
     published !== reportMeta.published;
 
+  const incompleteSections = sections.filter((s) => s.status !== "approved");
+
+  const handlePublishToggle = () => {
+    const turningOn = !published;
+    if (turningOn && incompleteSections.length > 0) {
+      setShowPublishConfirm(true);
+    } else {
+      setPublished((v) => !v);
+    }
+  };
+
+  // After save, isDirty becomes false and the button disables — no flash state needed
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     updateReportMeta({ title: title.trim(), period: period.trim(), published });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
   };
 
   return (
@@ -38,6 +48,47 @@ export default function AdminSettingsPage() {
           Edit metadata shown across the dashboard, report view, and nav bar.
         </p>
       </div>
+
+      {/* Publish confirmation modal */}
+      {showPublishConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-6 max-w-sm w-full shadow-xl mx-4">
+            <h2 className="text-sm font-semibold text-zinc-100 mb-2">Publish with incomplete sections?</h2>
+            <p className="text-xs text-zinc-400 mb-3">
+              {incompleteSections.length} section{incompleteSections.length !== 1 ? "s are" : " is"} not yet approved:
+            </p>
+            <ul className="space-y-1 mb-4 max-h-40 overflow-y-auto">
+              {incompleteSections.map((s) => (
+                <li key={s.id} className="text-xs text-zinc-400 flex items-center gap-2">
+                  <span className={cn(
+                    "px-1.5 py-0.5 rounded-full text-xs",
+                    s.status === "revision_needed" ? "bg-orange-900/50 text-orange-300" :
+                    s.status === "in_review" ? "bg-yellow-900/50 text-yellow-300" :
+                    s.status === "draft" ? "bg-blue-900/50 text-blue-300" :
+                    "bg-zinc-800 text-zinc-400"
+                  )}>{s.status.replace("_", " ")}</span>
+                  {s.title}
+                </li>
+              ))}
+            </ul>
+            <div className="flex gap-2 justify-end">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowPublishConfirm(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => { setPublished(true); setShowPublishConfirm(false); }}
+              >
+                Publish anyway
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handleSave} className="space-y-5">
         <div>
@@ -81,7 +132,7 @@ export default function AdminSettingsPage() {
             </div>
             <button
               type="button"
-              onClick={() => { setPublished((v) => !v); }}
+              onClick={handlePublishToggle}
               className={cn(
                 "relative w-11 h-6 rounded-full transition-colors flex-shrink-0",
                 published ? "bg-blue-500" : "bg-zinc-700"
@@ -105,16 +156,20 @@ export default function AdminSettingsPage() {
           >
             Save changes
           </button>
-          {saved && (
-            <span className="text-xs text-green-400">Saved</span>
-          )}
         </div>
       </form>
 
       {/* Executive Summary */}
       <div className="mt-8 space-y-3 pt-6 border-t border-zinc-800">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium text-zinc-200">Executive Summary</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-medium text-zinc-200">Executive Summary</h3>
+            {isSummaryStale && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-amber-950/50 border border-amber-800/60 text-amber-400">
+                Outdated
+              </span>
+            )}
+          </div>
           <Button
             size="sm"
             variant="outline"
@@ -130,6 +185,11 @@ export default function AdminSettingsPage() {
             ? `Last updated ${new Date(reportMeta.summaryUpdatedAt).toLocaleString()}.`
             : "Not yet generated."}
         </p>
+        {isSummaryStale && (
+          <p className="text-xs text-amber-500/80">
+            One or more sections were approved after this summary was last generated. Regenerate to reflect the latest content.
+          </p>
+        )}
         {reportMeta.executiveSummary ? (
           <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 text-xs text-zinc-400 whitespace-pre-wrap leading-relaxed">
             {reportMeta.executiveSummary}
