@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useData } from "@/contexts/data-context";
 import { SectionStatus } from "@/types";
 import { StatsBar } from "@/components/features/dashboard/stats-bar";
@@ -16,13 +16,33 @@ const STATUS_PRIORITY: Record<SectionStatus, number> = {
   approved: 4,
 };
 
+const SME_FILTER_KEY = "gpsc_dashboard_sme_filter";
+
 export default function DashboardPage() {
-  const { sections, categoryTree, reportMeta } = useData();
+  const { sections, categoryTree, smeList, reportMeta } = useData();
   const categories = categoryTree.map((c) => c.name);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<SectionStatus | null>(null);
+  const [selectedSme, setSelectedSme] = useState<string | null>(null);
 
-  const filteredSections = sections
+  // Persist SME filter selection in localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem(SME_FILTER_KEY);
+    if (saved && smeList.includes(saved)) setSelectedSme(saved);
+  }, [smeList]);
+
+  const handleSmeSelect = (name: string | null) => {
+    setSelectedSme(name);
+    if (name) localStorage.setItem(SME_FILTER_KEY, name);
+    else localStorage.removeItem(SME_FILTER_KEY);
+  };
+
+  // SME filter applied first so StatsBar counts reflect the same scope
+  const smeFilteredSections = selectedSme
+    ? sections.filter((s) => s.assignedSme === selectedSme)
+    : sections;
+
+  const filteredSections = smeFilteredSections
     .filter((s) => {
       if (selectedCategory && s.category !== selectedCategory) return false;
       if (selectedStatus && s.status !== selectedStatus) return false;
@@ -30,7 +50,7 @@ export default function DashboardPage() {
     })
     .sort((a, b) => STATUS_PRIORITY[a.status] - STATUS_PRIORITY[b.status]);
 
-  const activeFilters = [selectedCategory, selectedStatus].filter(Boolean).length;
+  const activeFilters = [selectedCategory, selectedStatus, selectedSme].filter(Boolean).length;
 
   return (
     <div>
@@ -41,10 +61,38 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      <ProgressBanner sections={sections} />
+      <ProgressBanner sections={smeFilteredSections} />
+
+      {/* My Sections filter */}
+      <div className="flex items-center gap-2 mb-4 flex-wrap">
+        <span className="text-xs text-zinc-500">View:</span>
+        <button
+          onClick={() => handleSmeSelect(null)}
+          className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+            !selectedSme
+              ? "bg-zinc-700 border-zinc-600 text-zinc-100"
+              : "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
+          }`}
+        >
+          All sections
+        </button>
+        {smeList.map((name) => (
+          <button
+            key={name}
+            onClick={() => handleSmeSelect(selectedSme === name ? null : name)}
+            className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+              selectedSme === name
+                ? "bg-zinc-700 border-zinc-600 text-zinc-100"
+                : "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
+            }`}
+          >
+            {name}
+          </button>
+        ))}
+      </div>
 
       <StatsBar
-        sections={sections}
+        sections={smeFilteredSections}
         selectedStatus={selectedStatus}
         onStatusSelect={setSelectedStatus}
       />
@@ -55,7 +103,7 @@ export default function DashboardPage() {
             categories={categories}
             selected={selectedCategory}
             onSelect={setSelectedCategory}
-            sections={sections}
+            sections={smeFilteredSections}
           />
         </aside>
 
@@ -66,7 +114,7 @@ export default function DashboardPage() {
                 {filteredSections.length} section{filteredSections.length !== 1 ? "s" : ""} shown
               </p>
               <button
-                onClick={() => { setSelectedCategory(null); setSelectedStatus(null); }}
+                onClick={() => { setSelectedCategory(null); setSelectedStatus(null); handleSmeSelect(null); }}
                 className="text-xs text-zinc-400 hover:text-zinc-200 underline"
               >
                 Clear all filters
