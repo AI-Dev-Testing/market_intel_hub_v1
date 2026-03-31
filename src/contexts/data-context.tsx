@@ -102,6 +102,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [reportMeta, setReportMeta] = useState<ReportMeta>(INITIAL_REPORT_META);
   const [promptConfig, setPromptConfig] = useState<PromptConfig>(INITIAL_PROMPT_CONFIG);
   const [isSummaryLoading, setIsSummaryLoading] = useState(false);
+  const [isSummaryStale, setIsSummaryStale] = useState(false);
   const [scorecards, setScorecards] = useState<Record<string, RiskScorecardData>>(INITIAL_SCORECARDS);
   const [freightTrends, setFreightTrends] = useState<Record<string, FreightTrendData>>(INITIAL_FREIGHT_TRENDS);
 
@@ -381,6 +382,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         reportMeta,
         updateReportMeta,
         isSummaryLoading,
+        isSummaryStale,
         regenerateSummary,
         promptConfig,
         saveUniversalPrompt,

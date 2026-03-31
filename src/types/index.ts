@@ -12,6 +12,12 @@ export interface SectionPromptOverride {
   userPromptTemplate?: string;
 }
 
+export interface StatusLogEntry {
+  status: SectionStatus;
+  timestamp: string; // ISO date string, e.g. "2026-03-30"
+  note?: string;     // reviewer note captured at the time of the change
+}
+
 export interface ReportSection {
   id: string;
   title: string;
@@ -24,6 +30,7 @@ export interface ReportSection {
   notes: string;
   sources?: Source[];
   promptOverride?: SectionPromptOverride;
+  statusHistory?: StatusLogEntry[];
 }
 
 export interface Source {
@@ -131,6 +138,7 @@ export interface DataContextValue {
   reportMeta: ReportMeta;
   updateReportMeta: (meta: Partial<ReportMeta>) => void;
   isSummaryLoading: boolean;
+  isSummaryStale: boolean;
   regenerateSummary: () => Promise<void>;
 
   // Prompt management
