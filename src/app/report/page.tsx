@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, Link2 } from "lucide-react";
 import { useData } from "@/contexts/data-context";
 import { SECTION_IMAGES } from "@/lib/data/section-images";
 import { SECTION_CHARTS } from "@/lib/data/chart-registry";
@@ -37,6 +37,11 @@ function SourcesDisclosure({ sources }: { sources: Source[] }) {
       )}
     </div>
   );
+}
+
+function categorySlug(cat: string): string {
+  const slug = cat.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  return slug || "category";
 }
 
 export default function ReportPage() {
@@ -168,7 +173,7 @@ export default function ReportPage() {
               : catSections;
 
             return (
-              <div key={category}>
+              <div key={category} id={categorySlug(category)}>
                 <div className="flex items-center justify-between pb-2 border-b border-zinc-800 mb-5">
                   <h2 className="text-base font-semibold text-zinc-200">{category}</h2>
                   {hasToggle && (
@@ -195,7 +200,7 @@ export default function ReportPage() {
                     const imageUrl = SECTION_IMAGES[section.id];
                     const ChartComponent = SECTION_CHARTS[section.id];
                     return (
-                      <div key={section.id} className="rounded-lg border border-zinc-800 overflow-hidden">
+                      <div key={section.id} id={section.id} className="rounded-lg border border-zinc-800 overflow-hidden">
                         {imageUrl ? (
                           <div className="relative h-36 w-full">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -210,9 +215,29 @@ export default function ReportPage() {
                           <div className="h-10 bg-zinc-900" />
                         )}
                         <div className="p-5">
-                          <h3 className="text-sm font-semibold text-zinc-200 mb-3">
-                            {section.title}
-                          </h3>
+                          <div className="group flex items-start gap-1.5 mb-3">
+                            <h3 className="text-sm font-semibold text-zinc-200 flex-1">
+                              {section.title}
+                            </h3>
+                            <a
+                              href={`#${section.id}`}
+                              onClick={async (e) => {
+                                e.preventDefault();
+                                const url = `${window.location.origin}/report#${section.id}`;
+                                try {
+                                  await navigator.clipboard.writeText(url);
+                                } catch {
+                                  // clipboard unavailable — URL still visible in address bar via replaceState
+                                }
+                                window.history.replaceState(null, "", `/report#${section.id}`);
+                              }}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity mt-0.5 text-zinc-600 hover:text-zinc-400 flex-shrink-0"
+                              title="Copy link to section"
+                              aria-label="Copy link to section"
+                            >
+                              <Link2 className="w-3.5 h-3.5" />
+                            </a>
+                          </div>
                           {ChartComponent && (
                             <div className="mb-4 -mx-5 px-5 pb-4 border-b border-zinc-800">
                               <ChartComponent />
