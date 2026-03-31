@@ -10,6 +10,7 @@ import {
   ReportSection,
   RiskScorecardData,
   SectionPromptOverride,
+  StatusLogEntry,
   SubcategoryNode,
 } from "@/types";
 import {
@@ -102,7 +103,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [reportMeta, setReportMeta] = useState<ReportMeta>(INITIAL_REPORT_META);
   const [promptConfig, setPromptConfig] = useState<PromptConfig>(INITIAL_PROMPT_CONFIG);
   const [isSummaryLoading, setIsSummaryLoading] = useState(false);
-  const [isSummaryStale, setIsSummaryStale] = useState(false);
+  // Computed: summary is stale if any approved section was updated after the last summary generation
+  const isSummaryStale = (() => {
+    if (!reportMeta.summaryUpdatedAt) return false;
+    const summaryDate = new Date(reportMeta.summaryUpdatedAt);
+    return sections
+      .filter((s) => s.status === "approved")
+      .some((s) => new Date(s.lastUpdated) > summaryDate);
+  })();
   const [scorecards, setScorecards] = useState<Record<string, RiskScorecardData>>(INITIAL_SCORECARDS);
   const [freightTrends, setFreightTrends] = useState<Record<string, FreightTrendData>>(INITIAL_FREIGHT_TRENDS);
 
@@ -119,9 +127,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const updateSection = (id: string, updates: Partial<ReportSection>) => {
     setSections((prev) =>
-      prev.map((s) =>
-        s.id === id ? { ...s, ...updates, lastUpdated: today() } : s
-      )
+      prev.map((s) => {
+        if (s.id !== id) return s;
+        const statusChanged = updates.status !== undefined && updates.status !== s.status;
+        const newEntry: StatusLogEntry | undefined = statusChanged
+          ? { status: updates.status!, timestamp: today(), note: updates.notes ?? s.notes ?? undefined }
+          : undefined;
+        return {
+          ...s,
+          ...updates,
+          lastUpdated: today(),
+          statusHistory: newEntry
+            ? [...(s.statusHistory ?? []), newEntry]
+            : (s.statusHistory ?? []),
+        };
+      })
     );
   };
 
