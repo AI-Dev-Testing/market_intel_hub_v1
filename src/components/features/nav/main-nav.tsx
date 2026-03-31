@@ -40,7 +40,19 @@ export function MainNav() {
             ))}
           </nav>
         </div>
-        <span className="text-xs text-zinc-500">{reportMeta.period} Report</span>
+        <div className="flex items-center gap-3">
+          <span
+            className={cn(
+              "text-xs font-medium px-2 py-0.5 rounded-full border",
+              reportMeta.published
+                ? "bg-green-950/50 border-green-800/60 text-green-400"
+                : "bg-amber-950/50 border-amber-800/60 text-amber-400"
+            )}
+          >
+            {reportMeta.published ? "PUBLISHED" : "DRAFTING"}
+          </span>
+          <span className="text-xs text-zinc-500">{reportMeta.period} Report</span>
+        </div>
       </div>
     </header>
   );
