@@ -53,6 +53,24 @@ function estimateReadTime(text: string): number {
   return Math.max(1, Math.ceil(text.trim().split(/\s+/).length / 200));
 }
 
+function findMatchingSection(
+  bulletText: string,
+  sections: { id: string; title: string }[]
+): { id: string; title: string } | undefined {
+  const lower = bulletText.toLowerCase();
+  // Longest title match wins to avoid false positives on short titles
+  return [...sections]
+    .sort((a, b) => b.title.length - a.title.length)
+    .find((s) => lower.includes(s.title.toLowerCase()));
+}
+
+function renderBold(text: string): React.ReactNode {
+  const parts = text.split(/\*\*(.+?)\*\*/g);
+  return parts.map((part, i) =>
+    i % 2 === 1 ? <strong key={i}>{part}</strong> : part
+  );
+}
+
 function BackToTop() {
   const [visible, setVisible] = useState(false);
 
@@ -157,18 +175,26 @@ export default function ReportPage() {
             {reportMeta.executiveSummary
               .split("\n")
               .filter((line) => line.trim().startsWith("•"))
-              .map((line, i) => (
-                <li key={i} className="flex gap-2 text-sm text-zinc-300 leading-relaxed">
-                  <span className="text-zinc-500 flex-shrink-0 mt-0.5">•</span>
-                  <span
-                    dangerouslySetInnerHTML={{
-                      __html: line
-                        .replace(/^•\s*/, "")
-                        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>"),
-                    }}
-                  />
-                </li>
-              ))}
+              .map((line, i) => {
+                const cleanText = line.replace(/^•\s*/, "");
+                const match = findMatchingSection(cleanText, approvedSections);
+                const inner = <span>{renderBold(cleanText)}</span>;
+                return (
+                  <li key={i} className="flex gap-2 text-sm text-zinc-300 leading-relaxed">
+                    <span className="text-zinc-500 flex-shrink-0 mt-0.5">•</span>
+                    {match ? (
+                      <a
+                        href={`#${match.id}`}
+                        className="hover:text-zinc-100 transition-colors underline decoration-zinc-700 hover:decoration-zinc-500"
+                      >
+                        {inner}
+                      </a>
+                    ) : (
+                      inner
+                    )}
+                  </li>
+                );
+              })}
           </ul>
           {reportMeta.summaryUpdatedAt && (
             <p className="text-xs text-zinc-600 mt-3">
@@ -321,6 +347,14 @@ export default function ReportPage() {
           })}
         </div>
       )}
+        {approvedByCategory.length > 0 && (
+          <footer className="mt-16 pt-6 border-t border-zinc-800">
+            <p className="text-xs font-semibold text-zinc-400">GPSC Market Intelligence Team</p>
+            <p className="text-xs text-zinc-600 mt-1">
+              For questions about this report, contact your GPSC procurement lead.
+            </p>
+          </footer>
+        )}
         <BackToTop />
       </div>
     </div>
