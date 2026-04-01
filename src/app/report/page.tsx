@@ -9,6 +9,7 @@ import { SECTION_IMAGES } from "@/lib/data/section-images";
 import { SECTION_CHARTS } from "@/lib/data/chart-registry";
 import { Source } from "@/types";
 import { TocSidebar, type TocEntry } from "@/components/features/report/toc-sidebar";
+import { MarkdownContent } from "@/components/ui/markdown-content";
 
 function SourcesDisclosure({ sources }: { sources: Source[] }) {
   const [open, setOpen] = useState(false);
@@ -95,20 +96,32 @@ function BackToTop() {
   );
 }
 
+const STATUS_CHIP: Record<string, { label: string; className: string }> = {
+  revision_needed: { label: "Revision Needed", className: "bg-orange-900/50 text-orange-300 border border-orange-800/60" },
+  in_review:       { label: "In Review",        className: "bg-yellow-900/50 text-yellow-300 border border-yellow-800/60" },
+  draft:           { label: "Draft",            className: "bg-blue-900/50   text-blue-300   border border-blue-800/60"   },
+  pending:         { label: "Pending",          className: "bg-zinc-800      text-zinc-500   border border-zinc-700"      },
+};
+
 export default function ReportPage() {
   const { sections, categoryTree, reportMeta } = useData();
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
+  const isDrafting = !reportMeta.published;
   const approvedSections = sections.filter((s) => s.status === "approved");
   const totalSections = sections.length;
 
   // Use live category tree order for grouping
   const categoryNames = categoryTree.map((c) => c.name);
+  // In DRAFTING phase: include all sections (approved + stubs for non-approved)
+  // In PUBLISHED phase: approved only
   const approvedByCategory = categoryNames
     .map((category) => ({
       category,
-      sections: approvedSections.filter((s) => s.category === category),
+      sections: isDrafting
+        ? sections.filter((s) => s.category === category)
+        : approvedSections.filter((s) => s.category === category),
     }))
     .filter((group) => group.sections.length > 0);
 
@@ -116,10 +129,13 @@ export default function ReportPage() {
     ? approvedByCategory.filter((g) => g.category === activeCategory)
     : approvedByCategory;
 
+  // TOC only includes approved sections — stubs are not navigable
   const tocEntries: TocEntry[] = visibleCategories.map(({ category, sections: catSections }) => ({
     categoryId: categorySlug(category),
     categoryLabel: category,
-    sections: catSections.map((s) => ({ id: s.id, title: s.title })),
+    sections: catSections
+      .filter((s) => s.status === "approved")
+      .map((s) => ({ id: s.id, title: s.title })),
   }));
 
   const toggleCategory = (cat: string) =>
@@ -277,6 +293,30 @@ export default function ReportPage() {
                 </div>
                 <div className="space-y-6">
                   {sectionsToRender.map((section) => {
+                    // Non-approved stub — only rendered in DRAFTING phase
+                    if (section.status !== "approved") {
+                      const chip = STATUS_CHIP[section.status] ?? STATUS_CHIP.pending;
+                      return (
+                        <div key={section.id} className="rounded-lg border border-dashed border-zinc-700 p-5 opacity-60">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-start gap-2 flex-1 min-w-0">
+                              <h3 className="text-sm font-semibold text-zinc-400 leading-snug">{section.title}</h3>
+                              <span className={`flex-shrink-0 mt-0.5 text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${chip.className}`}>
+                                {chip.label}
+                              </span>
+                            </div>
+                            <Link
+                              href={`/sections/${section.id}`}
+                              className="flex-shrink-0 text-xs text-zinc-500 hover:text-zinc-300 transition-colors whitespace-nowrap"
+                            >
+                              Edit →
+                            </Link>
+                          </div>
+                          <p className="text-xs text-zinc-600 mt-2">Not yet approved — content hidden until approved.</p>
+                        </div>
+                      );
+                    }
+
                     const imageUrl = SECTION_IMAGES[section.id];
                     const ChartComponent = SECTION_CHARTS[section.id];
                     return (
@@ -334,9 +374,7 @@ export default function ReportPage() {
                               <ChartComponent />
                             </div>
                           )}
-                          <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">
-                            {section.draft}
-                          </p>
+                          <MarkdownContent content={section.draft} className="text-sm" />
                           {section.sources && section.sources.length > 0 && (
                             <SourcesDisclosure sources={section.sources} />
                           )}

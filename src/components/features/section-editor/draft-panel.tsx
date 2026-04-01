@@ -10,6 +10,7 @@ import { useSourcePreferences } from "@/hooks/use-source-preferences";
 import { useAutosave } from "@/hooks/use-autosave";
 import { useData } from "@/contexts/data-context";
 import { cn } from "@/lib/utils";
+import { MarkdownContent } from "@/components/ui/markdown-content";
 
 interface DraftPanelProps {
   section: ReportSection;
@@ -538,16 +539,18 @@ export function DraftPanel({ section, onDraftChange, onSourcesChange, onStatusCh
         </div>
       )}
 
-      <Textarea
-        value={draft}
-        onChange={(e) => handleDraftChange(e.target.value)}
-        readOnly={isApproved}
-        placeholder="Draft content will appear here. Click 'Generate with AI' to create an initial draft, or type directly."
-        className={cn(
-          "min-h-64 bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 text-sm leading-relaxed resize-y",
-          isApproved && "opacity-75 cursor-default"
-        )}
-      />
+      {isApproved ? (
+        <div className="min-h-64 rounded-md border border-zinc-700 bg-zinc-900/50 px-3 py-2 opacity-75">
+          <MarkdownContent content={draft} className="text-sm" />
+        </div>
+      ) : (
+        <Textarea
+          value={draft}
+          onChange={(e) => handleDraftChange(e.target.value)}
+          placeholder="Draft content will appear here. Click 'Generate with AI' to create an initial draft, or type directly."
+          className="min-h-64 bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 text-sm leading-relaxed resize-y"
+        />
+      )}
       <p className="text-xs text-zinc-600">
         {draft.length} characters · Last updated: {section.lastUpdated}
       </p>
