@@ -59,8 +59,13 @@ export default function AdminSettingsPage() {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
+      const raw = ev.target?.result;
+      if (typeof raw !== "string") {
+        setImportError("Could not read file.");
+        return;
+      }
       try {
-        const parsed = JSON.parse(ev.target?.result as string);
+        const parsed = JSON.parse(raw);
         const required = ["sections", "categoryTree", "smeList", "reportMeta", "promptConfig"];
         const missing = required.filter((k) => !(k in parsed));
         if (missing.length > 0) {
@@ -81,6 +86,9 @@ export default function AdminSettingsPage() {
   const handleConfirmImport = () => {
     if (pendingImport) {
       importState(pendingImport);
+      setTitle(pendingImport.reportMeta.title);
+      setPeriod(pendingImport.reportMeta.period);
+      setPublished(pendingImport.reportMeta.published);
       setPendingImport(null);
     }
     setShowImportConfirm(false);
@@ -149,7 +157,7 @@ export default function AdminSettingsPage() {
               This will replace all current report data including sections, categories, and settings. This cannot be undone.
             </p>
             <div className="flex gap-2 justify-end">
-              <Button size="sm" variant="outline" onClick={() => setShowImportConfirm(false)}>
+              <Button size="sm" variant="outline" onClick={() => { setShowImportConfirm(false); setPendingImport(null); }}>
                 Cancel
               </Button>
               <Button size="sm" onClick={handleConfirmImport}>
