@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { useData } from "@/contexts/data-context";
 import { DEFAULT_USER_PROMPT_TEMPLATE } from "@/lib/data/sections";
 import { SectionPromptOverride } from "@/types";
+import { MarkdownContent } from "@/components/ui/markdown-content";
 
 // ---------- Section Override Modal ----------
 
@@ -135,6 +136,44 @@ export default function PromptsAdminPage() {
   const handleResetToDefault = () => {
     setUserPromptTemplate(DEFAULT_USER_PROMPT_TEMPLATE);
     setSystemPrompt("");
+  };
+
+  // Test panel state
+  const [testSectionId, setTestSectionId] = useState<string>("");
+  const [testOutput, setTestOutput] = useState<string | null>(null);
+  const [isTesting, setIsTesting] = useState(false);
+  const [testError, setTestError] = useState<string | null>(null);
+  const [showTestPanel, setShowTestPanel] = useState(false);
+
+  const approvedSections = sections.filter((s) => s.status === "approved");
+
+  const handleTestPrompt = async () => {
+    const section = sections.find((s) => s.id === testSectionId);
+    if (!section) return;
+    setIsTesting(true);
+    setTestOutput(null);
+    setTestError(null);
+    try {
+      const res = await fetch("/api/generate-draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sectionTitle: section.title,
+          category: section.category,
+          subcategory: section.subcategory,
+          systemPrompt: systemPrompt.trim() || undefined,
+          userPromptTemplate: userPromptTemplate.trim() || undefined,
+          useWebSearch: false,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Generation failed");
+      setTestOutput(data.draft ?? "");
+    } catch (err) {
+      setTestError(err instanceof Error ? err.message : "Unknown error");
+    } finally {
+      setIsTesting(false);
+    }
   };
 
   // Section overrides
@@ -391,6 +430,77 @@ export default function PromptsAdminPage() {
           }}
         />
       )}
+
+      {/* Prompt Test Panel */}
+      <div className="mt-8 pt-6 border-t border-zinc-800">
+        <button
+          onClick={() => {
+            setShowTestPanel((v) => !v);
+            if (!testSectionId && approvedSections.length > 0) {
+              setTestSectionId(approvedSections[0].id);
+            }
+          }}
+          className="flex items-center gap-2 text-sm font-medium text-zinc-300 hover:text-zinc-100 transition-colors"
+        >
+          <span>{showTestPanel ? "▾" : "▸"}</span>
+          Test this prompt
+        </button>
+        <p className="text-xs text-zinc-600 mt-1">
+          Run the current (unsaved) prompt against any approved section without saving anything.
+        </p>
+
+        {showTestPanel && (
+          <div className="mt-4 space-y-4">
+            <div className="flex items-end gap-3 flex-wrap">
+              <div className="flex-1 min-w-48">
+                <label className="block text-xs text-zinc-400 mb-1.5">Test against section</label>
+                <select
+                  value={testSectionId}
+                  onChange={(e) => { setTestSectionId(e.target.value); setTestOutput(null); }}
+                  className="w-full bg-zinc-900 border border-zinc-700 rounded-md px-2.5 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-500"
+                >
+                  {approvedSections.length === 0 && (
+                    <option value="">No approved sections</option>
+                  )}
+                  {approvedSections.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.title} ({s.category})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Button
+                size="sm"
+                onClick={handleTestPrompt}
+                disabled={isTesting || !testSectionId}
+              >
+                {isTesting ? "Running…" : "Run test"}
+              </Button>
+            </div>
+
+            {testError && (
+              <p className="text-xs text-red-400">{testError}</p>
+            )}
+
+            {testOutput !== null && (
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Current draft</p>
+                  <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-4 max-h-96 overflow-y-auto">
+                    <MarkdownContent content={sections.find((s) => s.id === testSectionId)?.draft ?? ""} className="text-xs" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-amber-600 uppercase tracking-wide">Test output — not saved</p>
+                  <div className="rounded-lg border border-amber-900/50 bg-zinc-950 p-4 max-h-96 overflow-y-auto">
+                    <MarkdownContent content={testOutput} className="text-xs" />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
