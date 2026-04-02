@@ -320,7 +320,7 @@ export default function ReportPage() {
                       );
                     }
 
-                    const imageUrl = SECTION_IMAGES[section.id];
+                    const imageUrl = section.imageUrl || SECTION_IMAGES[section.id];
                     const ChartComponent = SECTION_CHARTS[section.id];
                     return (
                       <div key={section.id} id={section.id} className="rounded-lg border border-zinc-800 overflow-hidden">

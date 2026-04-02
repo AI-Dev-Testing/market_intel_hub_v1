@@ -31,6 +31,7 @@ export interface ReportSection {
   sources?: Source[];
   promptOverride?: SectionPromptOverride;
   statusHistory?: StatusLogEntry[];
+  imageUrl?: string;
 }
 
 export interface Source {

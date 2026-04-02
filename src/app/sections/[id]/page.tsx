@@ -20,6 +20,8 @@ export default function SectionEditorPage({ params }: { params: Promise<{ id: st
   const { getSectionById, updateSection, scorecards } = useData();
   const section = getSectionById(id);
   const [notes, setNotes] = useState(section?.notes ?? "");
+  const [imageUrl, setImageUrl] = useState(section?.imageUrl ?? "");
+  const [imageError, setImageError] = useState(false);
   const ChartComponent = section ? SECTION_CHARTS[section.id] : undefined;
 
   const notesRef = useRef<HTMLTextAreaElement>(null);
@@ -57,6 +59,11 @@ export default function SectionEditorPage({ params }: { params: Promise<{ id: st
 
   const handleNotesSave = () => {
     updateSection(id, { notes });
+  };
+
+  const handleImageUrlSave = () => {
+    updateSection(id, { imageUrl: imageUrl.trim() || undefined });
+    setImageError(false);
   };
 
   const handleRevisionGateHit = () => {
@@ -171,6 +178,34 @@ export default function SectionEditorPage({ params }: { params: Promise<{ id: st
             reviewerNotes={notes}
             onRevisionGateHit={handleRevisionGateHit}
           />
+
+          {/* Banner Image */}
+          <div className="border border-zinc-800 rounded-lg p-4 bg-zinc-900 space-y-2">
+            <h3 className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Banner Image</h3>
+            <input
+              type="text"
+              value={imageUrl}
+              onChange={(e) => { setImageUrl(e.target.value); setImageError(false); }}
+              onBlur={handleImageUrlSave}
+              placeholder="https://example.com/image.jpg"
+              className={cn(
+                "w-full bg-zinc-950 border rounded-md px-2.5 py-1.5 text-xs text-zinc-100 placeholder:text-zinc-600 outline-none focus:border-zinc-500",
+                imageError ? "border-red-700" : "border-zinc-700"
+              )}
+            />
+            {imageError && (
+              <p className="text-xs text-red-400">Image could not be loaded — check the URL.</p>
+            )}
+            {imageUrl.trim() && !imageError && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={imageUrl}
+                alt=""
+                className="w-full h-16 object-cover rounded border border-zinc-800"
+                onError={() => setImageError(true)}
+              />
+            )}
+          </div>
 
           {/* Status change log */}
           {section.statusHistory && section.statusHistory.length > 0 && (
