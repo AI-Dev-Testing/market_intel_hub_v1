@@ -42,6 +42,10 @@ export default function DashboardPage() {
     ? sections.filter((s) => s.assignedSme === selectedSme)
     : sections;
 
+  const queueRevisionCount = smeFilteredSections.filter((s) => s.status === "revision_needed").length;
+  const queuePendingCount = smeFilteredSections.filter((s) => s.status === "pending").length;
+  const queueTotal = queueRevisionCount + queuePendingCount;
+
   const filteredSections = smeFilteredSections
     .filter((s) => {
       if (selectedCategory && s.category !== selectedCategory) return false;
@@ -90,6 +94,31 @@ export default function DashboardPage() {
           </button>
         ))}
       </div>
+
+      {/* Queue summary — only shown when an SME filter is active and there is actionable work */}
+      {selectedSme && queueTotal > 0 && (
+        <div className="flex items-center gap-2 mb-4 text-xs flex-wrap">
+          <span className="text-zinc-400 font-medium">
+            {queueTotal} section{queueTotal !== 1 ? "s" : ""} need{queueTotal === 1 ? "s" : ""} your attention:
+          </span>
+          {queueRevisionCount > 0 && (
+            <button
+              onClick={() => setSelectedStatus("revision_needed")}
+              className="px-2 py-0.5 rounded-full bg-orange-950/50 border border-orange-800/60 text-orange-300 hover:bg-orange-900/50 transition-colors"
+            >
+              {queueRevisionCount} revision{queueRevisionCount !== 1 ? "s" : ""} needed
+            </button>
+          )}
+          {queuePendingCount > 0 && (
+            <button
+              onClick={() => setSelectedStatus("pending")}
+              className="px-2 py-0.5 rounded-full bg-zinc-800 border border-zinc-700 text-zinc-400 hover:bg-zinc-700 transition-colors"
+            >
+              {queuePendingCount} pending draft{queuePendingCount !== 1 ? "s" : ""}
+            </button>
+          )}
+        </div>
+      )}
 
       <StatsBar
         sections={smeFilteredSections}
