@@ -389,7 +389,7 @@ export default function ReportPage() {
                             </div>
                             <span className="text-xs text-zinc-500">{section.assignedSme || "Unassigned"}</span>
                             <span className="text-zinc-700 text-xs">·</span>
-                            <span className="text-xs text-zinc-600">{section.lastUpdated}</span>
+                            <span className="text-xs text-zinc-600">{formatShortDate(section.lastUpdated)}</span>
                           </div>
                         </div>
                       </div>
