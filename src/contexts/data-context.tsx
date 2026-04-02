@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useRef, useEffect, useCallback, Re
 import {
   CategoryNode,
   DataContextValue,
+  ExportedState,
   FreightTrendData,
   PromptConfig,
   ReportMeta,
@@ -117,6 +118,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   // Refs used by the auto-trigger effect to avoid stale closures and dependency loops
   const publishedRef = useRef(INITIAL_REPORT_META.published);
   publishedRef.current = reportMeta.published;
+  const prevPublishedRef = useRef(INITIAL_REPORT_META.published);
   const lastApprovedIdsRef = useRef<Set<string>>(
     new Set(INITIAL_SECTIONS.filter((s) => s.status === "approved").map((s) => s.id))
   );
@@ -300,6 +302,23 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   }, [sections, reportMeta.title, reportMeta.period]);
 
+  // Auto-trigger: regenerate summary when transitioning DRAFTING → PUBLISHED if stale
+  useEffect(() => {
+    const wasPublished = prevPublishedRef.current;
+    prevPublishedRef.current = reportMeta.published;
+    if (!wasPublished && reportMeta.published) {
+      const summaryDate = reportMeta.summaryUpdatedAt
+        ? new Date(reportMeta.summaryUpdatedAt)
+        : null;
+      const isStale = summaryDate
+        ? sections
+            .filter((s) => s.status === "approved")
+            .some((s) => new Date(s.lastUpdated) > summaryDate)
+        : sections.some((s) => s.status === "approved");
+      if (isStale) regenerateSummary();
+    }
+  }, [reportMeta.published]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Auto-trigger: regenerate summary when a new section is approved and report is published
   useEffect(() => {
     const approvedIds = new Set(
@@ -318,6 +337,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const updateReportMeta = (meta: Partial<ReportMeta>) =>
     setReportMeta((prev) => ({ ...prev, ...meta }));
+
+  const importState = (data: ExportedState) => {
+    setSections(data.sections);
+    setCategoryTree(data.categoryTree);
+    setSmeList(data.smeList);
+    setReportMeta(data.reportMeta);
+    setPromptConfig(data.promptConfig);
+  };
 
   // ---- prompt management ----
 
@@ -404,6 +431,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         isSummaryLoading,
         isSummaryStale,
         regenerateSummary,
+        importState,
         promptConfig,
         saveUniversalPrompt,
         rollbackUniversalPrompt,

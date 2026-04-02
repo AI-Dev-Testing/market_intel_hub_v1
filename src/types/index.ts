@@ -108,6 +108,14 @@ export interface FreightTrendData {
   availability: FreightTrendDimension; // 1=Excellent … 5=Critical
 }
 
+export interface ExportedState {
+  sections: ReportSection[];
+  categoryTree: CategoryNode[];
+  smeList: string[];
+  reportMeta: ReportMeta;
+  promptConfig: PromptConfig;
+}
+
 export interface DataContextValue {
   // Existing
   sections: ReportSection[];
@@ -140,6 +148,7 @@ export interface DataContextValue {
   isSummaryLoading: boolean;
   isSummaryStale: boolean;
   regenerateSummary: () => Promise<void>;
+  importState: (data: ExportedState) => void;
 
   // Prompt management
   promptConfig: PromptConfig;

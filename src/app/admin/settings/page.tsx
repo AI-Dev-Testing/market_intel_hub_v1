@@ -1,18 +1,24 @@
 // src/app/admin/settings/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useData } from "@/contexts/data-context";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { ExportedState } from "@/types";
 
 export default function AdminSettingsPage() {
-  const { sections, reportMeta, updateReportMeta, isSummaryLoading, isSummaryStale, regenerateSummary } = useData();
+  const { sections, reportMeta, updateReportMeta, isSummaryLoading, isSummaryStale, regenerateSummary, importState,
+          categoryTree, smeList, promptConfig } = useData();
   const [title, setTitle] = useState(reportMeta.title);
   const [period, setPeriod] = useState(reportMeta.period);
   const [published, setPublished] = useState(reportMeta.published);
   const [showPublishConfirm, setShowPublishConfirm] = useState(false);
+  const [showImportConfirm, setShowImportConfirm] = useState(false);
+  const [pendingImport, setPendingImport] = useState<ExportedState | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isDirty =
     title !== reportMeta.title ||
@@ -34,6 +40,50 @@ export default function AdminSettingsPage() {
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     updateReportMeta({ title: title.trim(), period: period.trim(), published });
+  };
+
+  const handleExport = () => {
+    const data: ExportedState = { sections, categoryTree, smeList, reportMeta, promptConfig };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `gpsc-report-${new Date().toISOString().split("T")[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setImportError(null);
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const parsed = JSON.parse(ev.target?.result as string);
+        const required = ["sections", "categoryTree", "smeList", "reportMeta", "promptConfig"];
+        const missing = required.filter((k) => !(k in parsed));
+        if (missing.length > 0) {
+          setImportError(`Invalid export file — missing required fields: ${missing.join(", ")}`);
+          return;
+        }
+        setPendingImport(parsed as ExportedState);
+        setShowImportConfirm(true);
+      } catch {
+        setImportError("Could not parse file — make sure it is a valid GPSC export.");
+      }
+    };
+    reader.readAsText(file);
+    // Reset input so the same file can be re-selected
+    e.target.value = "";
+  };
+
+  const handleConfirmImport = () => {
+    if (pendingImport) {
+      importState(pendingImport);
+      setPendingImport(null);
+    }
+    setShowImportConfirm(false);
   };
 
   return (
@@ -90,6 +140,26 @@ export default function AdminSettingsPage() {
         </div>
       )}
 
+      {/* Import confirmation modal */}
+      {showImportConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-6 max-w-sm w-full shadow-xl mx-4">
+            <h2 className="text-sm font-semibold text-zinc-100 mb-2">Replace all report data?</h2>
+            <p className="text-xs text-zinc-400 mb-4">
+              This will replace all current report data including sections, categories, and settings. This cannot be undone.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button size="sm" variant="outline" onClick={() => setShowImportConfirm(false)}>
+                Cancel
+              </Button>
+              <Button size="sm" onClick={handleConfirmImport}>
+                Continue
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <form onSubmit={handleSave} className="space-y-5">
         <div>
           <label className="block text-xs text-zinc-400 mb-1.5">Report title</label>
@@ -127,7 +197,7 @@ export default function AdminSettingsPage() {
               <p className="text-xs text-zinc-600">
                 {published
                   ? "Report is live — executive summary auto-updates when sections are approved"
-                  : "Report is in drafting phase — summary will not auto-update"}
+                  : "Report is in drafting phase — summary auto-updates on publish if stale"}
               </p>
             </div>
             <button
@@ -158,6 +228,34 @@ export default function AdminSettingsPage() {
           </button>
         </div>
       </form>
+
+      {/* Export / Import */}
+      <div className="mt-8 pt-6 border-t border-zinc-800 space-y-3">
+        <div>
+          <h3 className="text-sm font-medium text-zinc-200">Export / Import</h3>
+          <p className="text-xs text-zinc-500 mt-1">
+            Share a snapshot of all report data with your team, or restore from a previous export.
+          </p>
+        </div>
+        <div className="flex items-center gap-3 flex-wrap">
+          <Button size="sm" variant="outline" onClick={handleExport}>
+            Export state
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()}>
+            Import state
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            className="hidden"
+            onChange={handleImportFile}
+          />
+        </div>
+        {importError && (
+          <p className="text-xs text-red-400">{importError}</p>
+        )}
+      </div>
 
       {/* Executive Summary */}
       <div className="mt-8 space-y-3 pt-6 border-t border-zinc-800">
