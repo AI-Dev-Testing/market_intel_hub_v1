@@ -23,7 +23,7 @@ export function MarkdownContent({ content, className }: MarkdownContentProps) {
         "prose-a:text-blue-400 prose-a:no-underline hover:prose-a:underline",
         "prose-code:text-zinc-300 prose-code:bg-zinc-800 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-code:before:content-none prose-code:after:content-none",
         "prose-pre:bg-zinc-900 prose-pre:border prose-pre:border-zinc-800",
-        "prose-blockquote:border-l-zinc-600 prose-blockquote:text-zinc-400 prose-blockquote:italic prose-blockquote:not-italic",
+        "prose-blockquote:border-l-2 prose-blockquote:border-zinc-600 prose-blockquote:pl-4 prose-blockquote:text-zinc-300 prose-blockquote:text-base prose-blockquote:not-italic prose-blockquote:font-normal",
         "prose-li:text-zinc-300 prose-li:marker:text-zinc-600",
         "prose-hr:border-zinc-800",
         // Table dark mode

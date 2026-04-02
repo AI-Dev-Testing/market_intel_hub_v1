@@ -271,7 +271,10 @@ export default function ReportPage() {
             return (
               <div key={category} id={categorySlug(category)}>
                 <div className="flex items-center justify-between pb-2 border-b border-zinc-800 mb-5">
-                  <h2 className="text-base font-semibold text-zinc-200">{category}</h2>
+                  <div className="flex items-center gap-3">
+                    <div className="w-0.5 h-5 bg-zinc-600 rounded-full flex-shrink-0" />
+                    <h2 className="text-base font-semibold text-zinc-100 tracking-tight">{category}</h2>
+                  </div>
                   {hasToggle && (
                     <button
                       onClick={() => toggleExpand(category)}
@@ -291,7 +294,7 @@ export default function ReportPage() {
                     </button>
                   )}
                 </div>
-                <div className="space-y-6">
+                <div className="space-y-8">
                   {sectionsToRender.map((section) => {
                     // Non-approved stub — only rendered in DRAFTING phase
                     if (section.status !== "approved") {
@@ -378,9 +381,16 @@ export default function ReportPage() {
                           {section.sources && section.sources.length > 0 && (
                             <SourcesDisclosure sources={section.sources} />
                           )}
-                          <p className="text-xs text-zinc-600 mt-4">
-                            — {section.assignedSme || "Unassigned"} · {section.lastUpdated}
-                          </p>
+                          <div className="flex items-center gap-2 mt-4 pt-3 border-t border-zinc-800/60">
+                            <div className="w-5 h-5 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center flex-shrink-0">
+                              <span className="text-[9px] font-semibold text-zinc-400 uppercase leading-none">
+                                {(section.assignedSme || "?")[0]}
+                              </span>
+                            </div>
+                            <span className="text-xs text-zinc-500">{section.assignedSme || "Unassigned"}</span>
+                            <span className="text-zinc-700 text-xs">·</span>
+                            <span className="text-xs text-zinc-600">{section.lastUpdated}</span>
+                          </div>
                         </div>
                       </div>
                     );
