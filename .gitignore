@@ -45,3 +45,16 @@ next-env.d.ts
 .playwright-mcp/
 .mcp.json
 .node-version
+
+# Superpowers / local dev tooling
+.superpowers/
+
+# Local verification screenshots and test artifacts
+*.png
+*.jpeg
+verify-*.png
+localhost-*.png
+localhost-*.jpeg
+server.log
+test-verify.mjs
+tl-ocean-*.png

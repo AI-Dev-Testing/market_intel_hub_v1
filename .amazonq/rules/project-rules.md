@@ -433,7 +433,7 @@ If business requirements are unclear:
 ```
 
 ### Environment Variables
-Required `.env.local`lvariables:
+Required `.env.local` variables:
 ```
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=
@@ -629,7 +629,7 @@ Before building PDF export again, the following must be clear:
 ---
 
 ## Version History
-- **Version 1.0** (2024): Initial CLAUDE.md structure
+- **Version 1.0** (2024): Initial project rules structure
 - **Version 1.1** (2026-02): GPSC Market Intelligence project initialized — business objectives, report structure, and prototype phase defined
 - **Version 1.2** (2026-03-19): Phase 1 prototype complete — full capability summary added, next priorities updated to reflect real-world validation gate and Phase 2 roadmap
 - **Version 1.3** (2026-03-20): PDF export attempted and reverted; lessons learned documented; Next Priorities updated
