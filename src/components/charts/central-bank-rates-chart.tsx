@@ -12,9 +12,6 @@ import {
 } from "recharts";
 
 const RATE_DATA = [
-  { month: "Mar '24", Fed: 5.50, ECB: 4.00, PBOC: 3.45 },
-  { month: "Apr '24", Fed: 5.50, ECB: 4.00, PBOC: 3.45 },
-  { month: "May '24", Fed: 5.50, ECB: 4.00, PBOC: 3.45 },
   { month: "Jun '24", Fed: 5.50, ECB: 3.65, PBOC: 3.45 },
   { month: "Jul '24", Fed: 5.50, ECB: 3.65, PBOC: 3.35 },
   { month: "Aug '24", Fed: 5.50, ECB: 3.65, PBOC: 3.35 },
@@ -33,9 +30,12 @@ const RATE_DATA = [
   { month: "Sep '25", Fed: 3.50, ECB: 1.75, PBOC: 2.95 },
   { month: "Oct '25", Fed: 3.50, ECB: 1.75, PBOC: 2.90 },
   { month: "Nov '25", Fed: 3.25, ECB: 1.75, PBOC: 2.90 },
-  { month: "Dec '25", Fed: 3.25, ECB: 1.75, PBOC: 2.90 },
+  { month: "Dec '25", Fed: 3.25, ECB: 1.75, PBOC: 2.85 },
   { month: "Jan '26", Fed: 3.25, ECB: 1.75, PBOC: 2.85 },
-  { month: "Feb '26", Fed: 3.25, ECB: 1.75, PBOC: 2.85 },
+  { month: "Feb '26", Fed: 3.25, ECB: 1.50, PBOC: 2.85 },
+  { month: "Mar '26", Fed: 3.25, ECB: 1.50, PBOC: 2.80 },
+  { month: "Apr '26", Fed: 3.00, ECB: 1.50, PBOC: 2.75 },
+  { month: "May '26", Fed: 3.00, ECB: 1.50, PBOC: 2.75 },
 ];
 
 const TOOLTIP_STYLE = {
@@ -47,9 +47,9 @@ const TOOLTIP_STYLE = {
 };
 
 const CURRENT = {
-  Fed: "3.25%",
-  ECB: "1.75%",
-  PBOC: "2.85%",
+  Fed: "3.00%",
+  ECB: "1.50%",
+  PBOC: "2.75%",
 };
 
 export function CentralBankRatesChart() {

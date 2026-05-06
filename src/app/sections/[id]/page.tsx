@@ -72,7 +72,7 @@ export default function SectionEditorPage({ params }: { params: Promise<{ id: st
   };
 
   return (
-    <div className="max-w-4xl">
+    <div className="max-w-6xl">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1.5 text-xs text-zinc-500 mb-6">
         <button

@@ -151,7 +151,7 @@ export default function ReportPage() {
   return (
     <div className="flex gap-10 items-start">
       <TocSidebar entries={tocEntries} />
-      <div className="min-w-0 flex-1 max-w-[780px]">
+      <div className="min-w-0 flex-1 max-w-[900px]">
         {!reportMeta.published && (
           <div className="mb-6 flex items-center gap-2.5 rounded-md bg-amber-950/40 border border-amber-800/50 px-4 py-3">
             <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0" />

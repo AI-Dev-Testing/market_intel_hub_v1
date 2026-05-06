@@ -12,39 +12,39 @@ import {
 } from "recharts";
 
 const BRENT = [
-  { month: "Sep '25", actual: 74.2 },
-  { month: "Oct '25", actual: 76.8 },
   { month: "Nov '25", actual: 73.1 },
   { month: "Dec '25", actual: 74.9 },
   { month: "Jan '26", actual: 78.3 },
-  { month: "Feb '26", actual: 80.1, forecast: 80.1 },
-  { month: "Mar '26", forecast: 79.5 },
-  { month: "Apr '26", forecast: 78.0 },
-  { month: "May '26", forecast: 77.0 },
+  { month: "Feb '26", actual: 80.1 },
+  { month: "Mar '26", actual: 77.4 },
+  { month: "Apr '26", actual: 74.2 },
+  { month: "May '26", actual: 73.8, forecast: 73.8 },
+  { month: "Jun '26", forecast: 72.5 },
+  { month: "Jul '26", forecast: 71.0 },
 ];
 
 const TTF = [
-  { month: "Sep '25", actual: 38.4 },
-  { month: "Oct '25", actual: 42.1 },
   { month: "Nov '25", actual: 45.6 },
   { month: "Dec '25", actual: 48.3 },
   { month: "Jan '26", actual: 52.7 },
-  { month: "Feb '26", actual: 49.2, forecast: 49.2 },
-  { month: "Mar '26", forecast: 44.0 },
-  { month: "Apr '26", forecast: 36.0 },
-  { month: "May '26", forecast: 30.5 },
+  { month: "Feb '26", actual: 44.1 },
+  { month: "Mar '26", actual: 37.8 },
+  { month: "Apr '26", actual: 34.2 },
+  { month: "May '26", actual: 32.9, forecast: 32.9 },
+  { month: "Jun '26", forecast: 30.5 },
+  { month: "Jul '26", forecast: 28.0 },
 ];
 
 const COAL = [
-  { month: "Sep '25", actual: 131.2 },
-  { month: "Oct '25", actual: 128.4 },
   { month: "Nov '25", actual: 124.7 },
   { month: "Dec '25", actual: 121.3 },
   { month: "Jan '26", actual: 118.5 },
-  { month: "Feb '26", actual: 115.8, forecast: 115.8 },
-  { month: "Mar '26", forecast: 113.0 },
-  { month: "Apr '26", forecast: 111.0 },
-  { month: "May '26", forecast: 109.5 },
+  { month: "Feb '26", actual: 115.8 },
+  { month: "Mar '26", actual: 112.4 },
+  { month: "Apr '26", actual: 109.6 },
+  { month: "May '26", actual: 108.1, forecast: 108.1 },
+  { month: "Jun '26", forecast: 106.0 },
+  { month: "Jul '26", forecast: 104.5 },
 ];
 
 const TOOLTIP_STYLE = {

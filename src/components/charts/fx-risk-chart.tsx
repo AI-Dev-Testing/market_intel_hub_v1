@@ -11,12 +11,12 @@ import {
 } from "recharts";
 
 const FX_DATA = [
-  { currency: "CNY", ytd: -2.1, rate: "7.28",  m1: "-0.3%", m3: "-0.8%",  volatility: "Low"    },
-  { currency: "EUR", ytd: -1.5, rate: "1.072", m1: "-0.6%", m3: "-0.9%",  volatility: "Low"    },
-  { currency: "INR", ytd: -3.2, rate: "86.40", m1: "-0.5%", m3: "-1.8%",  volatility: "Medium" },
-  { currency: "JPY", ytd: -4.7, rate: "151.2", m1: "-0.9%", m3: "-2.4%",  volatility: "Medium" },
-  { currency: "MXN", ytd: -5.1, rate: "20.31", m1: "-1.4%", m3: "-3.1%",  volatility: "Medium" },
-  { currency: "BRL", ytd: -8.4, rate: "5.89",  m1: "-2.1%", m3: "-5.2%",  volatility: "High"   },
+  { currency: "CNY", ytd: -2.8, rate: "7.34",  m1: "-0.4%", m3: "-1.2%",  volatility: "Low"    },
+  { currency: "EUR", ytd: -1.2, rate: "1.078", m1: "+0.3%", m3: "-0.5%",  volatility: "Low"    },
+  { currency: "INR", ytd: -3.9, rate: "87.10", m1: "-0.6%", m3: "-2.1%",  volatility: "Medium" },
+  { currency: "JPY", ytd: -5.2, rate: "153.8", m1: "-1.1%", m3: "-2.8%",  volatility: "Medium" },
+  { currency: "MXN", ytd: -6.3, rate: "20.85", m1: "-1.8%", m3: "-3.6%",  volatility: "High"   },
+  { currency: "BRL", ytd: -9.7, rate: "6.12",  m1: "-2.4%", m3: "-5.8%",  volatility: "High"   },
 ];
 
 function barColor(ytd: number): string {
@@ -37,7 +37,7 @@ const TOOLTIP_STYLE = {
   border: "1px solid #3f3f46",
   borderRadius: "6px",
   fontSize: "12px",
-  color: "#d4d4d8",
+  color: "#e4e4e7",
 };
 
 export function FXRiskChart() {
@@ -70,6 +70,8 @@ export function FXRiskChart() {
             />
             <Tooltip
               contentStyle={TOOLTIP_STYLE}
+              labelStyle={{ color: "#f4f4f5" }}
+              itemStyle={{ color: "#e4e4e7" }}
               cursor={{ fill: "#27272a" }}
               formatter={(value) => [`${Number(value).toFixed(1)}%`, "YTD vs USD"]}
             />

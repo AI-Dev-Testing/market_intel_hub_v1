@@ -13,9 +13,6 @@ import {
 } from "recharts";
 
 const DATA = [
-  { month: "Sep '24", US: 47.2, EU: 44.8, China: 49.7 },
-  { month: "Oct '24", US: 46.5, EU: 45.1, China: 50.1 },
-  { month: "Nov '24", US: 47.8, EU: 44.3, China: 49.8 },
   { month: "Dec '24", US: 48.4, EU: 45.6, China: 50.5 },
   { month: "Jan '25", US: 49.1, EU: 46.2, China: 50.2 },
   { month: "Feb '25", US: 50.2, EU: 47.1, China: 49.9 },
@@ -31,6 +28,8 @@ const DATA = [
   { month: "Dec '25", US: 52.6, EU: 50.8, China: 51.1 },
   { month: "Jan '26", US: 51.9, EU: 50.2, China: 50.8 },
   { month: "Feb '26", US: 52.4, EU: 49.9, China: 51.3 },
+  { month: "Mar '26", US: 52.8, EU: 50.5, China: 51.6 },
+  { month: "Apr '26", US: 53.1, EU: 50.8, China: 51.4 },
 ];
 
 const TOOLTIP_STYLE = {

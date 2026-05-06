@@ -153,7 +153,7 @@ export default function DashboardPage() {
           {filteredSections.length === 0 ? (
             <p className="text-sm text-zinc-500 text-center py-12">No sections match these filters</p>
           ) : (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(280px,1fr))]">
               {filteredSections.map((section) => (
                 <SectionCard key={section.id} section={section} />
               ))}

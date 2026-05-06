@@ -13,12 +13,12 @@ import {
 } from "recharts";
 
 const DATA = [
-  { quarter: "Q1 '25", US: 2.9, EU: 1.1, China: 5.1, Global: 3.2, forecast: false },
   { quarter: "Q2 '25", US: 2.7, EU: 1.2, China: 4.9, Global: 3.0, forecast: false },
   { quarter: "Q3 '25", US: 2.5, EU: 1.3, China: 4.7, Global: 2.9, forecast: false },
   { quarter: "Q4 '25", US: 2.4, EU: 1.4, China: 4.5, Global: 2.8, forecast: false },
-  { quarter: "Q1 '26*", US: 2.2, EU: 1.4, China: 4.4, Global: 2.8, forecast: true },
-  { quarter: "Q2 '26*", US: 2.0, EU: 1.5, China: 4.3, Global: 2.9, forecast: true },
+  { quarter: "Q1 '26", US: 2.1, EU: 1.4, China: 4.4, Global: 2.8, forecast: false },
+  { quarter: "Q2 '26*", US: 2.0, EU: 1.5, China: 4.3, Global: 2.8, forecast: true },
+  { quarter: "Q3 '26*", US: 1.9, EU: 1.6, China: 4.2, Global: 2.7, forecast: true },
 ];
 
 const COLORS = {

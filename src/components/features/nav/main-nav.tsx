@@ -6,8 +6,9 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useData } from "@/contexts/data-context";
 
-const navLinks = [
+const navLinks: { href: string; label: string; preview?: boolean }[] = [
   { href: "/dashboard", label: "Dashboard" },
+  { href: "/intel", label: "Intel Hub", preview: true },
   { href: "/report", label: "Report View" },
   { href: "/admin", label: "Admin" },
 ];
@@ -18,7 +19,7 @@ export function MainNav() {
 
   return (
     <header className="border-b border-zinc-800 bg-zinc-950">
-      <div className="mx-auto max-w-7xl px-6 flex items-center justify-between h-14">
+      <div className="mx-auto w-full max-w-[1920px] px-4 sm:px-6 lg:px-10 flex items-center justify-between h-14">
         <div className="flex items-center gap-8">
           <span className="text-sm font-semibold text-zinc-100 tracking-wide">
             GPSC Market Intelligence
@@ -29,13 +30,18 @@ export function MainNav() {
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "px-3 py-1.5 rounded-md text-sm transition-colors",
-                  pathname === link.href || (link.href === "/admin" && pathname.startsWith("/admin"))
+                  "px-3 py-1.5 rounded-md text-sm transition-colors inline-flex items-center gap-1.5",
+                  pathname === link.href || (link.href === "/admin" && pathname.startsWith("/admin")) || (link.href === "/intel" && pathname.startsWith("/intel"))
                     ? "bg-zinc-800 text-zinc-100"
                     : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
                 )}
               >
                 {link.label}
+                {link.preview && (
+                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-zinc-700 text-zinc-400 leading-none">
+                    Preview
+                  </span>
+                )}
               </Link>
             ))}
           </nav>

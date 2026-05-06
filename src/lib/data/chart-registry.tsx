@@ -7,6 +7,7 @@ import { GDPOutlookChart } from "@/components/charts/gdp-outlook-chart";
 import { FXRiskChart } from "@/components/charts/fx-risk-chart";
 import { CentralBankRatesChart } from "@/components/charts/central-bank-rates-chart";
 import { EnergyPricesChart } from "@/components/charts/energy-prices-chart";
+import { VIXChart } from "@/components/charts/vix-chart";
 import { SCOverviewChart } from "@/components/charts/sc-overview-chart";
 import { GeopoliticalRiskChart } from "@/components/charts/sc-geopolitical-chart";
 import { LogisticsRiskChart } from "@/components/charts/sc-logistics-chart";
@@ -26,6 +27,7 @@ export const SECTION_CHARTS: Record<string, ComponentType> = {
   "macro-fx":     FXRiskChart,
   "macro-rates":  CentralBankRatesChart,
   "macro-energy": EnergyPricesChart,
+  "macro-vix":    VIXChart,
   "sc-overview":     SCOverviewChart,
   "sc-geopolitical": GeopoliticalRiskChart,
   "sc-logistics":    LogisticsRiskChart,
