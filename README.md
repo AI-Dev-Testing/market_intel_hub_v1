@@ -39,6 +39,7 @@ The app is organised into four main areas accessible from the top navigation bar
 | Section Editor | `/sections/[id]` | Edit draft content, generate with AI, manage workflow |
 | Report | `/report` | Read the consolidated final report (approved sections only) |
 | Admin | `/admin` | Manage categories, sections, team, settings, workflow overrides |
+| Intel Hub | `/intel` | Live intelligence dashboard — domain tiles, drill-down panels, signal strips |
 
 ---
 
@@ -121,6 +122,64 @@ Visual pipeline stepper + action buttons:
 | In Review | Approve, Request revision |
 | Revision Needed | Resubmit for review |
 | Approved | Reopen for revision |
+
+---
+
+## Intel Hub (`/intel`)
+
+A read-only intelligence dashboard giving a live cross-domain view of market conditions. Accessible from the top navigation bar.
+
+### Signal Strip
+
+A persistent bar at the top of the page showing all five domains as clickable RAG-coded chips. Each chip shows the domain label, delta arrow, and current status label. Clicking a chip opens the corresponding drill-down panel. An overall **Posture** badge reflects the highest single-domain score.
+
+### What Changed This Quarter
+
+A collapsible band below the signal strip showing a narrative summary of key changes since last quarter. The **↺ Refresh** button regenerates it via AI from the current approved sections.
+
+### Domain Tiles
+
+Five cards in a responsive grid — one per intelligence domain:
+
+| Domain | ID | Score source |
+|---|---|---|
+| Macroeconomic | `macro` | Hardcoded seed (updated each cycle) |
+| Supply Chain Risks | `sc-risk` | Live — average of 4 SC scorecard `overallScore` values from DataContext |
+| Electrical Commodities | `electrical` | Hardcoded seed |
+| Mechanical Commodities | `mechanical` | Hardcoded seed |
+| Logistics | `logistics` | Hardcoded seed |
+
+Each tile shows: composite score /10, QoQ delta, RAG badge, 2–3 signal bullets, previous score, and an **Explore →** CTA. Clicking opens the drill-down panel.
+
+### Drill-Down Panels
+
+Centered modal panels that open when a domain tile or signal strip chip is clicked. Three panels are fully built; two show a placeholder.
+
+#### Macroeconomic Panel
+- 6 KPI indicator cards (PMI, GDP, FX Risk, Central Bank Rates, Energy Prices, VIX) — colour-coded by status
+- Click any card to expand the corresponding chart + approved section draft inline
+- Top Signals block
+
+#### Supply Chain Risks Panel
+- 4 sub-risk cards (Compliance & ESG, Natural Hazard & Climate, Logistics & Transportation, Geopolitical & Trade) — live scores from DataContext scorecards, colour-coded by RAG
+- Click any card to expand: the risk scorecard chart (dimensions + regional breakdown) + intelligence brief draft
+- Top Signals block
+
+#### Logistics Panel
+- Market Overview block — always-visible `TLOverviewChart` (headline KPIs, freight conditions matrix, Red Sea alert) — live from DataContext `freightTrends`
+- 3 drill-down cards (Ocean Freight, Air Freight, Trade Lanes) — live rates headline and level from `freightTrends`
+- Click any card to expand: individual chart + 3-column freight conditions breakdown (Rates / Capacity / Availability) + intelligence brief draft
+- Top Signals block
+
+#### Electrical Commodities / Mechanical Commodities
+- Placeholder panels — show signal bullets and a "coming soon" state. To be built in a future phase.
+
+### Intel Hub Data Sources
+
+- Domain tile scores and signals: `src/lib/data/intel-seed.ts`
+- SC Risk scores: live from `DataContext.scorecards` (same data as the Risk Scores panel in the Section Editor)
+- Freight conditions: live from `DataContext.freightTrends` (same data as the Freight Trend Panel in the Section Editor)
+- Macro KPI cards: `src/lib/data/macro-indicators.ts`
 
 ---
 
@@ -446,11 +505,24 @@ src/
         section-card.tsx            # Section card with urgency borders
         category-filter.tsx         # Sidebar filter with counts
         progress-banner.tsx         # Report completion progress bar
+      intel/
+        intel-panel.tsx             # Centered modal panel shell (backdrop, breadcrumb, close)
+        domain-tile.tsx             # Domain tile card (score, RAG, delta, signals)
+        signal-strip.tsx            # Top bar with domain chips and overall posture badge
+        what-changed-band.tsx       # Collapsible QoQ summary band with AI refresh
+        rag-badge.tsx               # RAG status pill (green/amber/red)
+        delta-chip.tsx              # QoQ delta arrow chip
+        panel-placeholder.tsx       # Placeholder for unbuilt domain panels
+        panels/
+          macro-panel.tsx           # Macroeconomic drill-down (KPI cards + chart expand)
+          sc-risk-panel.tsx         # Supply Chain Risk drill-down (sub-risk cards + scorecard)
+          logistics-panel.tsx       # Logistics drill-down (overview chart + sub-mode cards)
       nav/main-nav.tsx              # Top navigation
       section-editor/
         draft-panel.tsx             # Draft editor + AI references + web search UI
         workflow-controls.tsx       # Status pipeline stepper + action buttons
         risk-scores-panel.tsx       # In-app risk score editor (SC sections only)
+        freight-trend-panel.tsx     # Freight conditions editor (TL sections only)
   contexts/data-context.tsx         # In-memory state + all CRUD methods + scorecard state
   hooks/
     use-source-preferences.ts       # localStorage whitelist/blacklist hook

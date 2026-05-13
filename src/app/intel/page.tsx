@@ -11,6 +11,8 @@ import { DomainTile } from "@/components/features/intel/domain-tile";
 import { IntelPanel, BreadcrumbItem } from "@/components/features/intel/intel-panel";
 import { PanelPlaceholder } from "@/components/features/intel/panel-placeholder";
 import { MacroPanel } from "@/components/features/intel/panels/macro-panel";
+import { ScRiskPanel } from "@/components/features/intel/panels/sc-risk-panel";
+import { LogisticsPanel } from "@/components/features/intel/panels/logistics-panel";
 
 export default function IntelHubPage() {
   const { scorecards } = useData();
@@ -81,9 +83,10 @@ export default function IntelHubPage() {
       {/* Centered panel */}
       <IntelPanel open={!!activePanel} onClose={closePanel} breadcrumbs={breadcrumbs}>
         {activeDomain && (
-          activeDomain.id === "macro"
-            ? <MacroPanel domain={activeDomain} />
-            : <PanelPlaceholder domain={activeDomain} />
+          activeDomain.id === "macro"    ? <MacroPanel domain={activeDomain} /> :
+          activeDomain.id === "sc-risk"   ? <ScRiskPanel domain={activeDomain} /> :
+          activeDomain.id === "logistics" ? <LogisticsPanel domain={activeDomain} /> :
+          <PanelPlaceholder domain={activeDomain} />
         )}
       </IntelPanel>
     </div>
